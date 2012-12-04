@@ -1,13 +1,13 @@
 from ConfigParser import ConfigParser
 from boto.s3.connection import S3Connection
-
+import logging
 CONFIGFILE = "S3.ini"
 config = ConfigParser()
 config.read(CONFIGFILE)
 
 accessKey = config.get("Credentials","aws_access_key_id")
 secretKey = config.get("Credentials","aws_secret_access_key")
-# conn = S3Connection(accessKey, secretKey)
+log = logging.getLogger('__main__')
 
 class Storage():
     """
@@ -20,7 +20,6 @@ class Storage():
         self.test = False
 
     def uploadByFilename(self, localFilename, cb=None):
-        print 'start upload!'
         import time
         start = time.time()
         self.getKey().set_contents_from_filename(localFilename)
@@ -28,7 +27,7 @@ class Storage():
         self.closeKey()
 
         interTime = time.time() - start
-        print 'update ok!',',waste time:', interTime
+        log.debug(('update file ', localFilename, ',waste time', interTime))
 
 
     def uploadByFile(self, fp, cb=None):
@@ -67,17 +66,17 @@ class Storage():
         """
         for i in range(failTimes):
             try:
-                if isinstance(fp, str):
-                    self.uploadByFilename(fp, cb)
-                else :
+                if isinstance(fp, file):
                     self.uploadByFile(fp, cb)
+                else :
+                    self.uploadByFilename(fp, cb)
                     
             except (Exception) , e:
-                print "upload failed,", fp , ",try Times:", failTimes, 'Exception:', e
+                log.info(("upload failed,", fp , ",try Times:", failTimes, 'Exception:', e))
             else :
                 break
         else:
-            print "upload faild,", fp
+            log.info(("upload faild,", fp))
         
 if __name__=="__main__" :
     print "accessKey:", accessKey,",secretKey:", secretKey

@@ -70,7 +70,31 @@ class ConnectionClosed:
 
 def truncate(data, max=100):
     return data and len(data)>max and data[:max] + '...(%d)'%(len(data),) or data
+
+def initLogging(logPath):
+    import logging
+
+    #create a logger
+    logger = logging.getLogger('__main__')
+    logger.setLevel(logging.DEBUG)
+    #create a handler to write log
+    fh = logging.FileHandler(logPath)
+    fh.setLevel(logging.INFO)
+    # create a handler to output stdout
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    #init the formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
     
+    logger.addHandler(ch)
+    logger.addHandler(fh)
+    
+    return logger
+
+log = initLogging('/var/log/rtmplite.log')
+
 class SockStream(object):
     '''A class that represents a socket as a stream'''
     def __init__(self, sock):
@@ -298,9 +322,9 @@ class Protocol(object):
             yield self.parseMessages()   # parse messages
         except ConnectionClosed:
             yield self.connectionClosed()
-            if _debug: print 'parse connection closed'
+            log.info('parse connection closed')
         except:
-            if _debug: print 'exception, closing connection'
+            log.info( 'exception, closing connection')
             if _debug: traceback.print_exc()
             yield self.connectionClosed()
                     
@@ -349,7 +373,7 @@ class Protocol(object):
                     scheme = s
                     break
             if scheme is None:
-                if _debug: print 'invalid RTMP connection data, assuming scheme 0'
+                log.error('invalid RTMP connection data, assuming scheme 0')
                 scheme = 0
             client_dh_offset = (sum([ord(data[i]) for i in range(768, 772)]) % 632 + 8) if scheme == 1 else (sum([ord(data[i]) for i in range(1532, 1536)]) % 632 + 772)
             outgoingKp = data[client_dh_offset:client_dh_offset+128]
@@ -453,8 +477,7 @@ class Protocol(object):
                 if len(data) == header.size:
                     if channel in self.incompletePackets:
                         del self.incompletePackets[channel]
-                        if _debug:
-                            print 'aggregated %r bytes message: readChunkSize(%r) x %r'%(len(data), self.readChunkSize, len(data) / self.readChunkSize)
+                        if _debug: print 'aggregated %r bytes message: readChunkSize(%r) x %r'%(len(data), self.readChunkSize, len(data) / self.readChunkSize)
                 else:
                     data, self.incompletePackets[channel] = data[:header.size], data[header.size:]
                 
@@ -464,7 +487,7 @@ class Protocol(object):
                 if hdr.type == Message.AGGREGATE:
                     ''' see http://code.google.com/p/red5/source/browse/java/server/trunk/src/org/red5/server/net/rtmp/event/Aggregate.java / getParts()
                     '''
-                    if _debug: print 'Protocol.parseMessages aggregated msg=', msg 
+                    if _debug: print 'Protocol.parseMessages aggregated msg=', msg
                     aggdata = data;
                     while len(aggdata) > 0:
                         '''
@@ -490,7 +513,7 @@ class Protocol(object):
                     
                         backpointer = struct.unpack('!I', aggdata[0:4])[0]
                         if backpointer != subsize:
-                            print 'Warning aggregate submsg backpointer=%r != %r' % (backpointer, subsize)                          
+                            log.worning(('Warning aggregate submsg backpointer=%r != %r' % (backpointer, subsize)))
                         aggdata = aggdata[4:] # skip back pointer, go to next message
                 else:
                     yield self.parseMessage(msg)
@@ -498,13 +521,13 @@ class Protocol(object):
 
     def parseMessage(self, msg):
         try:            
-            if _debug: print 'Protocol.parseMessage msg=', msg            
+            if _debug: print 'Protocol.parseMessage msg=', msg
             if msg.header.channel == Protocol.PROTOCOL_CHANNEL_ID:
                 yield self.protocolMessage(msg)
             else: 
                 yield self.messageReceived(msg)
         except:
-            if _debug: print 'Protocol.parseMessage exception', (traceback and traceback.print_exc() or None)
+            log.debug(('Protocol.parseMessage exception', (traceback and traceback.print_exc() or None)))
 
     def write(self):
         '''Writes messages to stream'''
@@ -512,7 +535,7 @@ class Protocol(object):
 #            while self.writeQueue.empty(): (yield multitask.sleep(0.01))
 #            message = self.writeQueue.get() # TODO this should be used using multitask.Queue and remove previous wait.
             message = yield self.writeQueue.get() # TODO this should be used using multitask.Queue and remove previous wait.
-            if _debug: print 'Protocol.write msg=', message
+            log.debug(('Protocol.write msg=', message))
             if message is None: 
                 try: self.stream.close()  # just in case TCP socket is not closed, close it.
                 except: pass
@@ -635,7 +658,7 @@ def getfilename(path, name, root):
     ignore, ignore, scope = path.partition('/')
     if scope: scope = scope + '/'
     result = root + scope + name + '.flv'
-    if _debug: print 'filename=', result
+    log.debug(('filename=', result))
     return result
 
 class FLV(object):
@@ -647,7 +670,7 @@ class FLV(object):
     def open(self, path, type='read', mode=0775):
         '''Open the file for reading (type=read) or writing (type=record or append).'''
         if str(path).find('/../') >= 0 or str(path).find('\\..\\') >= 0: raise ValueError('Must not contain .. in name')
-        if _debug: print 'opening file', path
+        log.debug(('opening file', path))
         self.tsp = self.tsr = 0; self.tsr0 = None; self.tsr1 = 0; self.type = type
         if type in ('record', 'append'):
             try: os.makedirs(os.path.dirname(path), mode)
@@ -669,7 +692,7 @@ class FLV(object):
         else: 
             self.fp = open(path, 'rb')
             magic, version, flags, offset = struct.unpack('!3sBBI', self.fp.read(9))
-            if _debug: print 'FLV.open() hdr=', magic, version, flags, offset
+            log.debug(('FLV.open() hdr=', magic, version, flags, offset))
             if magic != 'FLV': raise ValueError('This is not a FLV file')
             if version != 1: raise ValueError('Unsupported FLV file version')
             if offset > 9: self.fp.seek(offset-9, os.SEEK_CUR)
@@ -678,7 +701,7 @@ class FLV(object):
     
     def close(self):
         '''Close the underlying file for this object.'''
-        if _debug: print 'closing flv file'
+        log.debug('closing flv file')
         if self.type in ('record', 'append') and self.tsr0 is not None:
             self.writeDuration((self.tsr - self.tsr0)/1000.0)
         if self.fp is not None: 
@@ -692,7 +715,7 @@ class FLV(object):
         except: pass
         
     def writeDuration(self, duration):
-        if _debug: print 'writing duration', duration
+        log.debug(('writing duration', duration))
         output = amf.BytesIO()
         amfWriter = amf.AMF0(output) # TODO: use AMF3 if needed
         amfWriter.write('onMetaData')
@@ -724,7 +747,7 @@ class FLV(object):
     def reader(self, stream):
         '''A generator to periodically read the file and dispatch them to the stream. The supplied stream
         object must have a send(Message) method and id and client properties.'''
-        if _debug: print 'reader started'
+        log.debug(('reader started'))
         yield
         try:
             while self.fp is not None:
@@ -739,7 +762,7 @@ class FLV(object):
                 length = (len0 << 16) | len1; ts = (ts0 << 16) | (ts1 & 0x0ffff) | (ts2 << 24)
                 body = self.fp.read(length); ptagsize, = struct.unpack('>I', self.fp.read(4))
                 if ptagsize != (length+11): 
-                    if _debug: print 'invalid previous tag-size found:', ptagsize, '!=', (length+11),'ignored.'
+                    log.debug(('invalid previous tag-size found:', ptagsize, '!=', (length+11),'ignored.'))
                 if stream is None or stream.client is None: break # if it is closed
                 #hdr = Header(3 if type == Message.AUDIO else 4, ts if ts < 0xffffff else 0xffffff, length, type, stream.id)
                 hdr = Header(0, ts, length, type, stream.id)
@@ -750,15 +773,15 @@ class FLV(object):
                     amfReader = amf.AMF0(body) # TODO: use AMF3 if needed
                     name = amfReader.read()
                     obj = amfReader.read()
-                    if _debug: print 'FLV.read()', name, repr(obj)
+                    log.debug(('FLV.read()', name, repr(obj)))
                 yield stream.send(msg)
                 if ts > self.tsp: 
                     diff, self.tsp = ts - self.tsp, ts
-                    if _debug: print 'FLV.read() sleep', diff
+                    log.debug(('FLV.read() sleep', diff))
                     yield multitask.sleep(diff / 1000.0)
         except StopIteration: pass
         except: 
-            if _debug: print 'closing the reader', (sys and sys.exc_info() or None)
+            log.debug(('closing the reader', (sys and sys.exc_info() or None)))
             if self.fp is not None: 
                 try: self.fp.close()
                 except: pass
@@ -767,7 +790,7 @@ class FLV(object):
     def seek(self, offset):
         '''For file reader, try seek to the given time. The offset is in millisec'''
         if self.type == 'read':
-            if _debug: print 'FLV.seek() offset=', offset, 'current tsp=', self.tsp
+            log.debug(('FLV.seek() offset=', offset, 'current tsp=', self.tsp))
             self.fp.seek(0, os.SEEK_SET)
             magic, version, flags, length = struct.unpack('!3sBBI', self.fp.read(9))
             if length > 9: self.fp.seek(length-9, os.SEEK_CUR)
@@ -781,7 +804,7 @@ class FLV(object):
                 self.fp.seek(length, os.SEEK_CUR)
                 ptagsize, = struct.unpack('>I', self.fp.read(4))
                 if ptagsize != (length+11): break
-            if _debug: print 'FLV.seek() new ts=', ts, 'tell', self.fp.tell()
+            log.debug(('FLV.seek() new ts=', ts, 'tell', self.fp.tell()))
                 
         
 class Stream(object):
@@ -793,16 +816,15 @@ class Stream(object):
         self.queue = multitask.Queue()
         self.filename = None
         self._name = 'Stream[' + str(Stream.count) + ']'; Stream.count += 1
-        if _debug: print self, 'created'
+        log.debug((self, 'created'))
 
     def close(self):
-        print 'closing,', self.recordfile
-        if _debug: print self, 'closing'
+        log.debug((self, 'closing'))
         if self.recordfile is not None:
             self.recordfile.close()
             self.recordfile = None
             def doUpload():
-                s3 = Storage(self.name)
+                s3 = Storage(self.name+'.flv')
                 s3.upload(self.filename, 3)
             thread.start_new_thread(doUpload, ())
 
@@ -840,7 +862,7 @@ class Client(Protocol):
     
     def connectionClosed(self):
         '''Called when the client drops the connection'''
-        if _debug: 'Client.connectionClosed'
+        log.debug(('Client.connectionClosed'))
         yield self.writeMessage(None)
         yield self.queue.put((None,None))
             
@@ -850,7 +872,7 @@ class Client(Protocol):
             # if _debug: print 'rtmp.Client.messageReceived cmd=', cmd
             if cmd.name == 'connect':
                 self.agent = cmd.cmdData
-                if _debug: print 'connect', ', '.join(['%s=%r'%(x, getattr(self.agent, x)) for x in 'app flashVer swfUrl tcUrl fpad capabilities audioCodecs videoCodecs videoFunction pageUrl objectEncoding'.split() if hasattr(self.agent, x)])
+                log.debug(('connect', ', '.join(['%s=%r'%(x, getattr(self.agent, x)) for x in 'app flashVer swfUrl tcUrl fpad capabilities audioCodecs videoCodecs videoFunction pageUrl objectEncoding'.split() if hasattr(self.agent, x)])))
                 self.objectEncoding = self.agent.objectEncoding if hasattr(self.agent, 'objectEncoding') else 0.0
                 yield self.server.queue.put((self, cmd.args)) # new connection
             elif cmd.name == 'createStream':
@@ -887,7 +909,7 @@ class Client(Protocol):
         '''Method to accept an incoming client.'''
         response = Command()
         response.id, response.name, response.type = 1, '_result', self.rpc
-        if _debug: print 'Client.accept() objectEncoding=', self.objectEncoding
+        log.debug(('Client.accept() objectEncoding=', self.objectEncoding))
         arg = amf.Object(level='status', code='NetConnection.Connect.Success',
                          description='Connection succeeded.', fmsVer='rtmplite/8,2')
         if hasattr(self.agent, 'objectEncoding'):
@@ -918,7 +940,7 @@ class Client(Protocol):
         cmd.id, cmd.time, cmd.name, cmd.type = self._nextCallId, self.relativeTime, method, self.rpc
         cmd.args, cmd.cmdData = args, None
         self._nextCallId += 1
-        if _debug: print 'Client.call method=', method, 'args=', args, ' msg=', cmd.toMessage()
+        log.debug(('Client.call method=', method, 'args=', args, ' msg=', cmd.toMessage()))
         yield self.writeMessage(cmd.toMessage())
             
     def createStream(self):
@@ -949,14 +971,14 @@ class Server(object):
             while True:
                 sock, remote = (yield multitask.accept(self.sock))  # receive client TCP
                 if sock == None:
-                    if _debug: print 'rtmp.Server accept(sock) returned None.' 
+                    log.debug(('rtmp.Server accept(sock) returned None.' ))
                     break
-                if _debug: print 'connection received from', remote
+                log.debug(('connection received from', remote))
                 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1) # make it non-block
                 client = Client(sock, self)
         except GeneratorExit: pass # terminate
         except: 
-            if _debug: print 'rtmp.Server exception ', (sys and sys.exc_info() or None)
+            log.debug(('rtmp.Server exception ', (sys and sys.exc_info() or None)))
         
         if (self.sock):
             try: self.sock.close(); self.sock = None
@@ -971,32 +993,32 @@ class App(object):
     def __init__(self):
         self.name = str(self.__class__.__name__) + '[' + str(App.count) + ']'; App.count += 1
         self.players, self.publishers, self._clients = {}, {}, [] # Streams indexed by stream name, and list of clients
-        if _debug: print self.name, 'created'
+        log.debug((self.name, 'created'))
     def __del__(self):
-        if _debug: print self.name, 'destroyed'
+        log.debug((self.name, 'destroyed'))
     @property
     def clients(self):
         '''everytime this property is accessed it returns a new list of clients connected to this instance.'''
         return self._clients[1:] if self._clients is not None else []
     def onConnect(self, client, *args):
-        if _debug: print self.name, 'onConnect', client.path
+        log.debug((self.name, 'onConnect', client.path))
         return True
     def onDisconnect(self, client):
-        if _debug: print self.name, 'onDisconnect', client.path
+        log.debug((self.name, 'onDisconnect', client.path))
     def onPublish(self, client, stream):
-        if _debug: print self.name, 'onPublish', client.path, stream.name
+        log.debug((self.name, 'onPublish', client.path, stream.name))
     def onClose(self, client, stream):
-        if _debug: print self.name, 'onClose', client.path, stream.name
+        log.debug((self.name, 'onClose', client.path, stream.name))
     def onPlay(self, client, stream):
-        if _debug: print self.name, 'onPlay', client.path, stream.name
+        log.debug((self.name, 'onPlay', client.path, stream.name))
     def onStop(self, client, stream):
-        if _debug: print self.name, 'onStop', client.path, stream.name
+        log.debug((self.name, 'onStop', client.path, stream.name))
     def onCommand(self, client, cmd, *args):
-        if _debug: print self.name, 'onCommand', cmd, args
+        log.debug((self.name, 'onCommand', cmd, args))
     def onStatus(self, client, info):
-        if _debug: print self.name, 'onStatus', info
+        log.debug((self.name, 'onStatus', info))
     def onResult(self, client, result):
-        if _debug: print self.name, 'onResult', result
+        log.debug((self.name, 'onResult', result))
     def onPublishData(self, client, stream, message): # this is invoked every time some media packet is received from published stream.
         return True # should return True so that the data is actually published in that stream
     def onPlayData(self, client, stream, message):
@@ -1073,13 +1095,13 @@ class FlashServer(object):
             sock = self.sock = socket.socket(type=socket.SOCK_STREAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind((host, port))
-            if _debug: print 'listening on ', sock.getsockname()
+            log.debug(('listening on ', sock.getsockname()))
             sock.listen(5)
-            server = self.server = Server(sock) # start rtmp server on that socket
+            self.server = Server(sock) # start rtmp server on that socket
             multitask.add(self.serverlistener())
     
     def stop(self):
-        if _debug: print 'stopping Flash server'
+        log.info('stopping Flash server')
         if self.server and self.sock:
             try: self.sock.close(); self.sock = None
             except: pass
@@ -1093,7 +1115,7 @@ class FlashServer(object):
                 # TODO: we should reject non-localhost client connections.
                 if not client:                # if the server aborted abnormally,
                     break                     #    hence close the listener.
-                if _debug: print 'client connection received', client, args
+                log.debug(('client connection received', client, args))
                 if client.objectEncoding != 0 and client.objectEncoding != 3:
                 #if client.objectEncoding != 0:
                     yield client.rejectConnection(reason='Unsupported encoding ' + str(client.objectEncoding) + '. Please use NetConnection.defaultObjectEncoding=ObjectEncoding.AMF0')
@@ -1107,7 +1129,7 @@ class FlashServer(object):
                     if '*' not in self.apps and name not in self.apps:
                         yield client.rejectConnection(reason='Application not found: ' + name)
                     else: # create application instance as needed and add in our list
-                        if _debug: print 'name=', name, 'name in apps', str(name in self.apps)
+                        log.debug(('name=', name, 'name in apps', str(name in self.apps)))
                         app = self.apps[name] if name in self.apps else self.apps['*'] # application class
                         if client.path in self.clients: inst = self.clients[client.path][0]
                         else: inst = app()
@@ -1123,7 +1145,7 @@ class FlashServer(object):
                         try: 
                             result = inst.onConnect(client, *args)
                         except: 
-                            if _debug: print sys.exc_info()
+                            log.error(sys.exc_info())
                             yield client.rejectConnection(reason='Exception on onConnect'); 
                             continue
                         if result is True or result is None:
@@ -1138,7 +1160,7 @@ class FlashServer(object):
         except GeneratorExit: pass # terminate
         except StopIteration: raise
         except: 
-            if _debug: print 'serverlistener exception', traceback.print_exc()
+            log.error(('serverlistener exception', traceback.print_exc()))
             
     def clientlistener(self, client):
         '''Client listener (generator). It receives a command and invokes client handler, or receives a new stream and invokes streamlistener.'''
@@ -1146,7 +1168,7 @@ class FlashServer(object):
             while True:
                 msg, arg = (yield client.recv())   # receive new message from client
                 if not msg:                   # if the client disconnected,
-                    if _debug: print 'connection closed from client'
+                    log.debug('connection closed from client')
                     break                     #    come out of listening loop.
                 if msg == 'command':          # handle a new command
                     multitask.add(self.clienthandler(client, arg))
@@ -1155,11 +1177,11 @@ class FlashServer(object):
                     multitask.add(self.streamlistener(arg))
         except StopIteration: raise
         except:
-            if _debug: print 'clientlistener exception', (sys and sys.exc_info() or None)
+            log.error(('clientlistener exception', (sys and sys.exc_info() or None)))
         
         try:
             # client is disconnected, clear our state for application instance.
-            if _debug: print 'cleaning up client', client.path
+            log.debug(('cleaning up client', client.path))
             inst = None
             if client.path in self.clients:
                 inst = self.clients[client.path][0]
@@ -1168,13 +1190,13 @@ class FlashServer(object):
                 self.closehandler(stream)
             client.streams.clear() # and clear the collection of streams
             if client.path in self.clients and len(self.clients[client.path]) == 1: # no more clients left, delete the instance.
-                if _debug: print 'removing the application instance'
+                log.debug('removing the application instance')
                 inst = self.clients[client.path][0]
                 inst._clients = None
                 del self.clients[client.path]
             if inst is not None: inst.onDisconnect(client)
         except: 
-            if _debug: print 'clientlistener exception', (sys and sys.exc_info() or None)
+            log.debug(('clientlistener exception', (sys and sys.exc_info() or None)))
             
     def closehandler(self, stream):
         '''A stream is closed explicitly when a closeStream command is received from given client.'''
@@ -1205,12 +1227,12 @@ class FlashServer(object):
                 try:
                     result = inst.onCommand(client, cmd.name, *cmd.args)
                 except:
-                    if _debug: print 'Client.call exception', (sys and sys.exc_info() or None) 
+                    log.error(('Client.call exception', (sys and sys.exc_info() or None)))
                     code = '_error'
                 args = (result,) if result is not None else dict()
                 res.id, res.time, res.name, res.type = cmd.id, client.relativeTime, code, client.rpc
                 res.args, res.cmdData = args, None
-                if _debug: print 'Client.call method=', code, 'args=', args, ' msg=', res.toMessage()
+                log.debug(('Client.call method=', code, 'args=', args, ' msg=', res.toMessage()))
                 yield client.writeMessage(res.toMessage())
         yield
         
@@ -1221,20 +1243,20 @@ class FlashServer(object):
             while True:
                 msg = (yield stream.recv())
                 if not msg:
-                    if _debug: print 'stream closed'
+                    log.debug('stream closed')
                     self.closehandler(stream)
                     break
                 # if _debug: msg
                 multitask.add(self.streamhandler(stream, msg))
         except: 
-            if _debug: print 'streamlistener exception', (sys and sys.exc_info() or None)
+            log.error(('streamlistener exception', (sys and sys.exc_info() or None)))
             
     def streamhandler(self, stream, message):
         '''A generator to handle a single message on the stream.'''
         try:
             if message.type == Message.RPC or message.type == Message.RPC3:
                 cmd = Command.fromMessage(message)
-                if _debug: print 'streamhandler received cmd=', cmd
+                log.debug(('streamhandler received cmd=', cmd))
                 if cmd.name == 'publish':
                     yield self.publishhandler(stream, cmd)
                 elif cmd.name == 'play':
@@ -1248,14 +1270,14 @@ class FlashServer(object):
         except GeneratorExit: pass
         except StopIteration: raise
         except: 
-            if _debug: print 'exception in streamhandler', (sys and sys.exc_info())
+            log.error(('exception in streamhandler', (sys and sys.exc_info())))
     
     def publishhandler(self, stream, cmd):
         '''A new stream is published. Store the information in the application instance.'''
         try:
             stream.mode = 'live' if len(cmd.args) < 2 else cmd.args[1] # live, record, append
             stream.name = cmd.args[0]
-            if _debug: print 'publishing stream=', stream.name, 'mode=', stream.mode
+            log.debug(('publishing stream=', stream.name, 'mode=', stream.mode))
             if stream.name and '?' in stream.name: stream.name = stream.name.partition('?')[0]
             inst = self.clients[stream.client.path][0]
             if (stream.name in inst.publishers):
@@ -1265,11 +1287,11 @@ class FlashServer(object):
             
             stream.recordfile = inst.getfile(stream.client.path, stream.name, self.root, stream.mode)
             stream.filename = getfilename(stream.client.path, stream.name, self.root)
-            print 'client.path:', stream.client.path, ',stream.name:', stream.name, ',root:', self.root
+            log.debug(('client.path:', stream.client.path, ',stream.name:', stream.name, ',root:', self.root))
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='status', code='NetStream.Publish.Start', description='', details=None)])
             yield stream.send(response)
         except ValueError, E: # some error occurred. inform the app.
-            if _debug: print 'error in publishing stream', str(E)
+            log.debug(('error in publishing stream', str(E)))
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='error',code='NetStream.Publish.BadName',description=str(E),details=None)])
             yield stream.send(response)
 
@@ -1291,7 +1313,7 @@ class FlashServer(object):
                     if start > 0: stream.playfile.seek(start)
                     task = stream.playfile.reader(stream)
                 elif start >= 0: raise ValueError, 'Stream name not found'
-            if _debug: print 'playing stream=', name, 'start=', start
+            log.debug(('playing stream=', name, 'start=', start))
             inst.onPlay(stream.client, stream)
             
             # Default chunk size is 128. It is pretty small when we stream high audio and video quality.
@@ -1320,7 +1342,7 @@ class FlashServer(object):
             
             if task is not None: multitask.add(task)
         except ValueError, E: # some error occurred. inform the app.
-            if _debug: print 'error in playing stream', str(E)
+            log.error(('error in playing stream', str(E)))
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='error',code='NetStream.Play.StreamNotFound',description=str(E),details=None)])
             yield stream.send(response)
             
@@ -1334,7 +1356,7 @@ class FlashServer(object):
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Seek.Notify', description=stream.name, details=None)])
             yield stream.send(response)
         except ValueError, E: # some error occurred. inform the app.
-            if _debug: print 'error in seeking stream', str(E)
+            log.error(('error in seeking stream', str(E)))
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='error',code='NetStream.Seek.Failed',description=str(E),details=None)])
             yield stream.send(response)
             
@@ -1368,8 +1390,8 @@ if __name__ == '__main__':
         agent = FlashServer()
         agent.root = options.root
         agent.start(options.host, options.port)
-        if _debug: print time.asctime(), 'Flash Server Starts - %s:%d' % (options.host, options.port)
+        log.info(( time.asctime() , 'Flash Server Starts - %s:%d' % (options.host, options.port)))
         multitask.run()
     except KeyboardInterrupt:
         pass
-    if _debug: print time.asctime(), 'Flash Server Stops'
+    log.info((time.asctime() ,'Flash Server Stops'))
