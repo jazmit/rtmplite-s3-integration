@@ -803,8 +803,7 @@ class Stream(object):
             self.recordfile = None
             def doUpload():
                 s3 = Storage(self.name)
-                try: s3.uploadByFilename(self.filename)
-                except (Exception), e: print "Exception.", e ; raise
+                s3.upload(self.filename, 3)
             thread.start_new_thread(doUpload, ())
 
         if self.playfile is not None: self.playfile.close(); self.playfile = None

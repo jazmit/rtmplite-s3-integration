@@ -21,10 +21,14 @@ class Storage():
 
     def uploadByFilename(self, localFilename, cb=None):
         print 'start upload!'
+        import time
+        start = time.time()
         self.getKey().set_contents_from_filename(localFilename)
         if cb is not None and callable(cb): cb()
         self.closeKey()
-        print 'update ok!'
+
+        interTime = time.time() - start
+        print 'update ok!',',waste time:', interTime
 
 
     def uploadByFile(self, fp, cb=None):
@@ -52,7 +56,30 @@ class Storage():
             self.key = key
         return self.key
 
+    def upload(self, fp, failTimes=3, cb=None):
+        """
+        upload fp to S3 by file or filename and try 'failTimes' to upload if failed.
+        
+        Arguments:
+        - `fp`: file or filename.
+        - `failTimes`: defaul try 3 times if upload failed
+        - `cb`: callbackFun
+        """
+        for i in range(failTimes):
+            try:
+                if isinstance(fp, str):
+                    self.uploadByFilename(fp, cb)
+                else :
+                    self.uploadByFile(fp, cb)
+                    
+            except (Exception) , e:
+                print "upload failed,", fp , ",try Times:", failTimes, 'Exception:', e
+            else :
+                break
+        else:
+            print "upload faild,", fp
+        
 if __name__=="__main__" :
     print "accessKey:", accessKey,",secretKey:", secretKey
     s3 = Storage('123.flv')
-    s3.uploadByFilename("/vo/123.flv.flv")
+    s3.upload("/vo/123.flv.flv")
