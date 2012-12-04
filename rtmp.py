@@ -61,8 +61,8 @@ throw an exception and display the error message.
 
 '''
 
-import os, sys, time, struct, socket, traceback, multitask, amf, hashlib, hmac, random
-
+import os, sys, time, struct, socket, traceback, multitask, amf, hashlib, hmac, random, thread
+from s3_help import Storage
 _debug = False
 
 class ConnectionClosed:
@@ -791,12 +791,22 @@ class Stream(object):
         self.client, self.id, self.name = client, 0, ''
         self.recordfile = self.playfile = None # so that it doesn't complain about missing attribute
         self.queue = multitask.Queue()
+        self.filename = None
         self._name = 'Stream[' + str(Stream.count) + ']'; Stream.count += 1
         if _debug: print self, 'created'
-        
+
     def close(self):
+        print 'closing,', self.recordfile
         if _debug: print self, 'closing'
-        if self.recordfile is not None: self.recordfile.close(); self.recordfile = None
+        if self.recordfile is not None:
+            self.recordfile.close()
+            self.recordfile = None
+            def doUpload():
+                s3 = Storage(self.name)
+                try: s3.uploadByFilename(self.filename)
+                except (Exception), e: print "Exception.", e ; raise
+            thread.start_new_thread(doUpload, ())
+
         if self.playfile is not None: self.playfile.close(); self.playfile = None
         self.client = None # to clear the reference
         pass
@@ -1255,6 +1265,8 @@ class FlashServer(object):
             inst.onPublish(stream.client, stream)
             
             stream.recordfile = inst.getfile(stream.client.path, stream.name, self.root, stream.mode)
+            stream.filename = getfilename(stream.client.path, stream.name, self.root)
+            print 'client.path:', stream.client.path, ',stream.name:', stream.name, ',root:', self.root
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='status', code='NetStream.Publish.Start', description='', details=None)])
             yield stream.send(response)
         except ValueError, E: # some error occurred. inform the app.
