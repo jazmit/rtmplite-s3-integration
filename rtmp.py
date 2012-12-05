@@ -61,39 +61,16 @@ throw an exception and display the error message.
 
 '''
 
-import os, sys, time, struct, socket, traceback, multitask, amf, hashlib, hmac, random, thread
+import os, sys, time, struct, socket, traceback, multitask, amf, hashlib, hmac, random, thread, logging
 from s3_help import Storage
-_debug = False
 
+_debug = False
+log = logging.getLogger('__main__')
 class ConnectionClosed:
     'raised when the client closed the connection'
 
 def truncate(data, max=100):
     return data and len(data)>max and data[:max] + '...(%d)'%(len(data),) or data
-
-def initLogging(logPath):
-    import logging
-
-    #create a logger
-    logger = logging.getLogger('__main__')
-    logger.setLevel(logging.DEBUG)
-    #create a handler to write log
-    fh = logging.FileHandler(logPath)
-    fh.setLevel(logging.INFO)
-    # create a handler to output stdout
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    #init the formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    
-    logger.addHandler(ch)
-    logger.addHandler(fh)
-    
-    return logger
-
-log = initLogging('/var/log/rtmplite.log')
 
 class SockStream(object):
     '''A class that represents a socket as a stream'''
@@ -1383,7 +1360,7 @@ if __name__ == '__main__':
     parser.add_option('-p', '--port',    dest='port',    default=1935, type="int", help='listening port number. Default 1935')
     parser.add_option('-r', '--root',    dest='root',    default='./',       help="document path prefix. Directory must end with /. Default './'")
     parser.add_option('-d', '--verbose', dest='verbose', default=False, action='store_true', help='enable debug trace')
-    parser.add_option('-c', '--identity',dest='identity',default='/etc/.rtmplite-s3-integration', help='a file stored s3 accessKey and scretKey for upload')  
+    parser.add_option('-c', '--identity',dest='identity',default='S3.ini', help='a file stored s3 accessKey and scretKey for upload')  
     (options, args) = parser.parse_args()
     
     _debug = options.verbose

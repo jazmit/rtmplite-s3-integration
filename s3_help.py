@@ -1,6 +1,8 @@
 from ConfigParser import ConfigParser
 from boto.s3.connection import S3Connection
-import logging, os
+import logging, os, time
+
+log = logging.getLogger('__main__')
 
 class Storage():
     """
@@ -26,14 +28,9 @@ class Storage():
             log.info('loading accessKey & secretKey from ' + configPath)
 
     def uploadByFilename(self, localFilename, cb=None):
-        import time
-        start = time.time()
         self.getKey().set_contents_from_filename(localFilename)
         if cb is not None and callable(cb): cb()
         self.closeKey()
-
-        interTime = time.time() - start
-        log.debug(('update file ', localFilename, ',waste time', interTime))
 
     def uploadByFile(self, fp, cb=None):
         self.getKey().set_contents_from_file(fp, rewind=True)
@@ -78,19 +75,18 @@ class Storage():
         """
         for i in range(failTimes):
             try:
+                start = time.time()
                 if self.remoteFilename.find(r'/audio/')>-1 and fn.endswith("flv"):
                     self.ffmpegTranscode(fn)
                 self.uploadByFilename(fn, cb)
                 os.rename(fn, fn+'.uploaded')
+                log.debug(('updated file ', fn, ',waste time', time.time()-start))
             except (Exception) , e:
                 log.info(("upload failed,", fn , ",try Times:", i, 'Exception:', e))
             else :
                 break
         else:
             log.info(("upload failed,", fn))
-
-log = logging.getLogger('__main__')
-Storage.loadConfig('S3.ini')
 
 if __name__=="__main__" :
     Storage.loadConfig('/etc/.rtmplite-s3-integration')
