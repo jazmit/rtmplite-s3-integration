@@ -975,7 +975,7 @@ class Server(object):
                     break
                 log.debug(('connection received from', remote))
                 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1) # make it non-block
-                client = Client(sock, self)
+                Client(sock, self)
         except GeneratorExit: pass # terminate
         except: 
             log.debug(('rtmp.Server exception ', (sys and sys.exc_info() or None)))
@@ -1383,10 +1383,12 @@ if __name__ == '__main__':
     parser.add_option('-p', '--port',    dest='port',    default=1935, type="int", help='listening port number. Default 1935')
     parser.add_option('-r', '--root',    dest='root',    default='./',       help="document path prefix. Directory must end with /. Default './'")
     parser.add_option('-d', '--verbose', dest='verbose', default=False, action='store_true', help='enable debug trace')
+    parser.add_option('-c', '--identity',dest='identity',default='/etc/.rtmplite-s3-integration', help='a file stored s3 accessKey and scretKey for upload')  
     (options, args) = parser.parse_args()
     
     _debug = options.verbose
     try:
+        Storage.loadConfig(options.identity)
         agent = FlashServer()
         agent.root = options.root
         agent.start(options.host, options.port)
@@ -1395,3 +1397,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         pass
     log.info((time.asctime() ,'Flash Server Stops'))
+    
