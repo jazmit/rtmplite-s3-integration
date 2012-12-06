@@ -28,7 +28,9 @@ git pull https://github.com/jamesinchina/rtmplite-s3-integration.git
 mv rtmplite-s3-integration /usr/local/share/
 
 ## also add this 2 line to /etc/rc.local
-nohup python /usr/local/share/rtmplite-s3-integration/main.py >
-/dev/null 2> /dev/null & 
+nohup python /usr/local/share/rtmplite-s3-integration/main.py > /dev/null 2> /dev/null & 
 
 nohup python /usr/local/share/rtmplite-s3-integration/rtmpt.py -l 0.0.0.0:5081 > /dev/null 2> /dev/null &
+
+## add this line to /etc/crontab
+11 5    * * *   root    rm -f `find /videoStreams -name *.flv -mtime +30`

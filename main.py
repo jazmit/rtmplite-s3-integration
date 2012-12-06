@@ -60,4 +60,8 @@ class App():
         logger.addHandler(fh)
 
 if __name__=="__main__":
-   App().run()
+    import sys
+    if sys.platform.find("win")==-1 :
+        App().run()
+    else :
+        App(root=r"D://schoolshape/Red5/webapps/recorder-test/videoStreams/",logger=r"C://Users/Administrator/Desktop/temp/rtmplog.log",s3config="S3.ini").run()

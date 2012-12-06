@@ -1,6 +1,6 @@
 from ConfigParser import ConfigParser
 from boto.s3.connection import S3Connection
-import logging, os, time
+import logging, os, time, sys
 
 log = logging.getLogger('__main__')
 
@@ -76,8 +76,9 @@ class Storage():
                 start = time.time()
                 if self.remoteFilename.find(r'/audio/')>-1 and fn.endswith("flv"):
                     self.ffmpegTranscode(fn)
-                self.uploadByFilename(fn, cb)
-                os.rename(fn, fn+'.uploaded')
+                if sys.platform.find("win")==-1 :
+                    self.uploadByFilename(fn, cb)
+                    os.rename(fn, fn+'.uploaded')
                 log.debug(('updated file ', fn, ',waste time', time.time()-start))
             except (Exception) , e:
                 log.info(("upload failed,", fn , ",try Times:", i, 'Exception:', e))
