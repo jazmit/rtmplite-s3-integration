@@ -1,17 +1,34 @@
 More rtmplite details at
 http://code.google.com/p/rtmplite and http://code.google.com/p/siprtmp
 
-You must install boto which is Python interface to Amazon Web
+First, you must install boto which is Python interface to Amazon Web
 Services.
 More boto at https://github.com/boto/boto
 
 Then you must config the S3.ini with S3 identity.
 
-After all type `python rtmp.py -h` for more details to run trmplite.
+To run schoolshape rtmplite by typing `python main.py` using default config.
+
+If you want to run this app manually, type `python rtmp.py -h` for more details to run trmplite.
 
 This application will upload the recorde file to S3 automatically.
 
 If you wanted to recorde stream with rtmpt procotol, type `python
 rtmpt.py -h` for more details.
 
-Logging file stored in `/var/log/rtmplite.log`.
+Logging file is stored in `/var/log/rtmplite.log`.
+
+install script:
+apt-get install git python-pip -y
+
+pip install boto
+
+git pull https://github.com/jamesinchina/rtmplite-s3-integration.git
+
+mv rtmplite-s3-integration /usr/local/share/
+
+## also add this 2 line to /etc/rc.local
+nohup python /usr/local/share/rtmplite-s3-integration/main.py >
+/dev/null 2> /dev/null & 
+
+nohup python /usr/local/share/rtmplite-s3-integration/rtmpt.py -l 0.0.0.0:5081 > /dev/null 2> /dev/null &

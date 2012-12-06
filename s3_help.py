@@ -32,11 +32,11 @@ class Storage():
         if cb is not None and callable(cb): cb()
         self.closeKey()
 
-    def uploadByFile(self, fp, cb=None):
-        self.getKey().set_contents_from_file(fp, rewind=True)
-        if cb is not None and callable(cb): cb()
-        self.closeKey()
-        if not fp.closed: fp.close()
+    # def uploadByFile(self, fp, cb=None):
+    #     self.getKey().set_contents_from_file(fp, rewind=True)
+    #     if cb is not None and callable(cb): cb()
+    #     self.closeKey()
+    #     if not fp.closed: fp.close()
 
     def closeKey(self):
         if self.key is not None and not self.key.closed:
@@ -60,8 +60,6 @@ class Storage():
     def ffmpegTranscode(self, fromFile, toFile=None):
         if toFile is None: toFile = fromFile
         command = r'ffmpeg -metadata videocodecid="" -vn -acodec copy -y -i ' + fromFile + ' ' + toFile
-        print 'transcode',command
-
         os.system(command)
 
     def upload(self, fn, failTimes=3, cb=None):
@@ -91,5 +89,5 @@ class Storage():
 if __name__=="__main__" :
     Storage.loadConfig('/etc/.rtmplite-s3-integration')
     print "accessKey:", Storage.accessKey,",secretKey:", Storage.secretKey
-    s3 = Storage('/vo/audio/1.flv', test=True)
-    s3.upload("/vo/test/1.flv")
+    s3 = Storage('vo/1.flv', test=True)
+    s3.upload("/videoStreams/1.flv")

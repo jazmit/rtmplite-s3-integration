@@ -18,6 +18,7 @@ class App():
 
     def run(self):
         self.initLogging()
+        Storage.loadConfig(self.s3config)
         self.uploadRemain()
         self.startRtmp()
 
@@ -31,7 +32,6 @@ class App():
 
     def startRtmp(self):
         try:
-            Storage.loadConfig(self.s3config)
             agent = FlashServer()
             agent.root = self.root
             agent.start(self.host, self.port)

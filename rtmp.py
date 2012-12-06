@@ -66,6 +66,7 @@ from s3_help import Storage
 
 _debug = False
 log = logging.getLogger('__main__')
+
 class ConnectionClosed:
     'raised when the client closed the connection'
 
@@ -512,7 +513,7 @@ class Protocol(object):
 #            while self.writeQueue.empty(): (yield multitask.sleep(0.01))
 #            message = self.writeQueue.get() # TODO this should be used using multitask.Queue and remove previous wait.
             message = yield self.writeQueue.get() # TODO this should be used using multitask.Queue and remove previous wait.
-            log.debug(('Protocol.write msg=', message))
+            if _debug : print ('Protocol.write msg=', message)
             if message is None: 
                 try: self.stream.close()  # just in case TCP socket is not closed, close it.
                 except: pass
@@ -800,10 +801,9 @@ class Stream(object):
         if self.recordfile is not None:
             self.recordfile.close()
             self.recordfile = None
-            def doUpload():
-                s3 = Storage(self.name+'.flv')
-                s3.upload(self.filename, 3)
-            thread.start_new_thread(doUpload, ())
+            def doUpload(r, f):
+                Storage(r).upload(f, 3)
+            thread.start_new_thread(doUpload, (self.name+'.flv', self.filename))
 
         if self.playfile is not None: self.playfile.close(); self.playfile = None
         self.client = None # to clear the reference
