@@ -50,7 +50,7 @@ class App():
         fh.setLevel(logging.INFO)
         # create a handler to output stdout
         ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
+        ch.setLevel(logging.INFO)
         #init the formatter
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)

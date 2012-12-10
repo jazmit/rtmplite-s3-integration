@@ -806,23 +806,28 @@ class Stream(object):
             thread.start_new_thread(doUpload, (self.name+'.flv', self.filename))
 
         if self.playfile is not None: self.playfile.close(); self.playfile = None
+        response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Unpublish.Success', description="", details=None)])
+        multitask.add(self.clientSend(response, self.client))
         self.client = None # to clear the reference
-        pass
-    
+          
     def __repr__(self):
         return self._name;
     
     def recv(self):
         '''Generator to receive new Message on this stream, or None if stream is closed.'''
         return self.queue.get()
-    
-    def send(self, msg):
-        '''Method to send a Message or Command on this stream.'''
+
+
+    def clientSend(self, msg, client):
         if isinstance(msg, Command):
             msg = msg.toMessage()
         msg.streamId = self.id
         # if _debug: print self,'send'
-        if self.client is not None: yield self.client.writeMessage(msg)
+        yield client.writeMessage(msg)
+        
+    def send(self, msg):
+        '''Method to send a Message or Command on this stream.'''
+        yield self.clientSend(msg, self.client)
         
 class Client(Protocol):
     '''The client object represents a single connected client to the server.'''
@@ -842,7 +847,8 @@ class Client(Protocol):
         log.debug(('Client.connectionClosed'))
         yield self.writeMessage(None)
         yield self.queue.put((None,None))
-            
+
+        
     def messageReceived(self, msg):
         if (msg.type == Message.RPC or msg.type == Message.RPC3) and msg.streamId == 0:
             cmd = Command.fromMessage(msg)
@@ -901,7 +907,7 @@ class Client(Protocol):
         response.setArg(amf.Object(level='status', code='NetConnection.Connect.Rejected',
                         description=reason, fmsVer='rtmplite/8,2', details=None))
         yield self.writeMessage(response.toMessage())
-            
+        
     def redirectConnection(self, url, reason='Connection failed'):
         '''Method to redirect an incoming client to the given url.'''
         response = Command()
@@ -1000,6 +1006,17 @@ class App(object):
         return True # should return True so that the data is actually published in that stream
     def onPlayData(self, client, stream, message):
         return True # should return True so that data will be actually played in that stream
+        
+    def publishNotify(self, stream):
+        for s in self.players.get(stream.name, []):
+            response = Command(name='onStatus', id=1, tm=s.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Play.PublishNotify', description='', details=None)])
+            yield s.clientSend(response, s.client)
+        
+    def unpublishNotify(self, stream):
+        for s in self.players.get(stream.name, []):
+            response = Command(name='onStatus', id=1, tm=s.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Play.UnpublishNotify', description='', details=None)])
+            yield s.clientSend(response, s.client)
+        
     def getfile(self, path, name, root, mode):
         if mode == 'play':
             path = getfilename(path, name, root)
@@ -1110,7 +1127,7 @@ class FlashServer(object):
                         app = self.apps[name] if name in self.apps else self.apps['*'] # application class
                         if client.path in self.clients: inst = self.clients[client.path][0]
                         else: inst = app()
-                        
+
                         win_ack = Message()
                         win_ack.time, win_ack.type, win_ack.data = client.relativeTime, Message.WIN_ACK_SIZE, struct.pack('>L', client.writeWinSize)
                         yield client.writeMessage(win_ack)
@@ -1175,20 +1192,21 @@ class FlashServer(object):
         except: 
             log.debug(('clientlistener exception', (sys and sys.exc_info() or None)))
             
-    def closehandler(self, stream):
+    def closehandler(self, stream, cmd=None):
         '''A stream is closed explicitly when a closeStream command is received from given client.'''
         if stream.client is not None:
             inst = self.clients[stream.client.path][0]
             if stream.name in inst.publishers and inst.publishers[stream.name] == stream: # clear the published stream
                 inst.onClose(stream.client, stream)
                 del inst.publishers[stream.name]
+                multitask.add(inst.unpublishNotify(stream))
             if stream.name in inst.players and stream in inst.players[stream.name]:
                 inst.onStop(stream.client, stream)
                 inst.players[stream.name].remove(stream)
                 if len(inst.players[stream.name]) == 0:
                     del inst.players[stream.name]
             stream.close()
-        
+
     def clienthandler(self, client, cmd):
         '''A generator to handle a single command on the client.'''
         inst = self.clients[client.path][0]
@@ -1209,7 +1227,7 @@ class FlashServer(object):
                 args = (result,) if result is not None else dict()
                 res.id, res.time, res.name, res.type = cmd.id, client.relativeTime, code, client.rpc
                 res.args, res.cmdData = args, None
-                log.debug(('Client.call method=', code, 'args=', args, ' msg=', res.toMessage()))
+                log.debug('Client.call method=', code, 'args=', args, ' msg=', res.toMessage())
                 yield client.writeMessage(res.toMessage())
         yield
         
@@ -1239,7 +1257,7 @@ class FlashServer(object):
                 elif cmd.name == 'play':
                     yield self.playhandler(stream, cmd)
                 elif cmd.name == 'closeStream':
-                    self.closehandler(stream)
+                    self.closehandler(stream, cmd)
                 elif cmd.name == 'seek':
                     yield self.seekhandler(stream, cmd) 
             else: # audio or video message
@@ -1265,6 +1283,8 @@ class FlashServer(object):
             stream.recordfile = inst.getfile(stream.client.path, stream.name, self.root, stream.mode)
             stream.filename = getfilename(stream.client.path, stream.name, self.root)
             log.debug(('client.path:', stream.client.path, ',stream.name:', stream.name, ',root:', self.root))
+            #yield inst
+            yield inst.publishNotify(stream)
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='status', code='NetStream.Publish.Start', description='', details=None)])
             yield stream.send(response)
         except ValueError, E: # some error occurred. inform the app.
