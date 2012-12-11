@@ -68,4 +68,5 @@ if __name__=="__main__":
     if sys.platform.find("win")==-1 :
         App().run()
     else :
-        App(root=r"D://schoolshape/Red5/webapps/recorder-test/videoStreams/",logger=r"D://schoolshape/rtmplog.log",s3config=r"D://schoolshape/S3.ini", test=True).run()
+        rtmpliteDir = r"D://schoolshape/rtmplite/"
+        App(root=rtmpliteDir+r"videoStreams/",logger=rtmpliteDir+"main.log",s3config=rtmpliteDir+"S3.ini", test=True).run()
