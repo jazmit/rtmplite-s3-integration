@@ -11,11 +11,11 @@ class Storage():
     CONFIGFILE = None
     accessKey = None
     secretKey = None
+    test = False
     
-    def __init__(self, remoteFilename, test=False):
+    def __init__(self, remoteFilename):
         self.remoteFilename = remoteFilename
         self.key = None
-        self.test = test
     
     @staticmethod 
     def loadConfig(configPath):
@@ -27,9 +27,8 @@ class Storage():
             Storage.secretKey = config.get("Credentials","aws_secret_access_key")
             log.info('loading accessKey & secretKey from ' + configPath)
 
-    def uploadByFilename(self, localFilename, cb=None):
+    def uploadByFilename(self, localFilename):
         self.getKey().set_contents_from_filename(localFilename)
-        if cb is not None and callable(cb): cb()
         self.closeKey()
 
     # def uploadByFile(self, fp, cb=None):
@@ -47,7 +46,7 @@ class Storage():
         def getBucketName():
             keyname = 'public'
             if self.remoteFilename.find('private')>-1: keyname = 'private'
-            if self.test : keyname = 'test.' + keyname
+            if Storage.test : keyname = 'test.' + keyname
             return keyname + '.media.schoolshape.com'
         if self.key is None:
             conn = S3Connection(Storage.accessKey, Storage.secretKey)
@@ -76,16 +75,19 @@ class Storage():
                 start = time.time()
                 if self.remoteFilename.find(r'/audio/')>-1 and fn.endswith("flv"):
                     self.ffmpegTranscode(fn)
-                if sys.platform.find("win")==-1 :
-                    self.uploadByFilename(fn, cb)
-                    os.rename(fn, fn+'.uploaded')
+                log.debug("starting upload")
+                self.uploadByFilename(fn)
+                if cb is not None and callable(cb): cb()
+                rename = fn+'.uploaded'
+                if os.path.isfile(rename): os.remove(rename)
+                if sys.platform.find("win")==-1: os.rename(fn, rename)
                 log.debug(('updated file ', fn, ',waste time', time.time()-start))
             except (Exception) , e:
                 log.info(("upload failed,", fn , ",try Times:", i, 'Exception:', e))
             else :
                 break
         else:
-            log.info(("upload failed,", fn))
+            log.error(("upload failed,", fn))
 
 if __name__=="__main__" :
     Storage.loadConfig('/etc/.rtmplite-s3-integration')
