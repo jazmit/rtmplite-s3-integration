@@ -801,6 +801,7 @@ class Stream(object):
         if self.recordfile is not None:
             self.recordfile.close()
             self.recordfile = None
+                    
             def doUpload(r, f):
                 Storage(r).upload(f, 3)
             thread.start_new_thread(doUpload, (self.name+'.flv', self.filename))
@@ -816,7 +817,6 @@ class Stream(object):
     def recv(self):
         '''Generator to receive new Message on this stream, or None if stream is closed.'''
         return self.queue.get()
-
 
     def clientSend(self, msg, client):
         if isinstance(msg, Command):
@@ -848,7 +848,6 @@ class Client(Protocol):
         yield self.writeMessage(None)
         yield self.queue.put((None,None))
 
-        
     def messageReceived(self, msg):
         if (msg.type == Message.RPC or msg.type == Message.RPC3) and msg.streamId == 0:
             cmd = Command.fromMessage(msg)
@@ -899,7 +898,7 @@ class Client(Protocol):
             arg.objectEncoding, arg.details = self.objectEncoding, None
         response.setArg(arg)
         yield self.writeMessage(response.toMessage())
-            
+    
     def rejectConnection(self, reason=''):
         '''Method to reject an incoming client.'''
         response = Command()
@@ -1127,7 +1126,7 @@ class FlashServer(object):
                         app = self.apps[name] if name in self.apps else self.apps['*'] # application class
                         if client.path in self.clients: inst = self.clients[client.path][0]
                         else: inst = app()
-
+                        
                         win_ack = Message()
                         win_ack.time, win_ack.type, win_ack.data = client.relativeTime, Message.WIN_ACK_SIZE, struct.pack('>L', client.writeWinSize)
                         yield client.writeMessage(win_ack)
@@ -1227,7 +1226,7 @@ class FlashServer(object):
                 args = (result,) if result is not None else dict()
                 res.id, res.time, res.name, res.type = cmd.id, client.relativeTime, code, client.rpc
                 res.args, res.cmdData = args, None
-                log.debug('Client.call method=', code, 'args=', args, ' msg=', res.toMessage())
+                log.debug(('Client.call method=', code, 'args=', args, ' msg=', res.toMessage()))
                 yield client.writeMessage(res.toMessage())
         yield
         

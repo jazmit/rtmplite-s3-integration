@@ -9,20 +9,23 @@ class App():
     main app for schoolshape run rtmplite
     """
     
-    def __init__(self, root="/videoStreams/", host="0.0.0.0", port=1935, logger="/var/log/rtmplite/main.log", s3config="/etc/.rtmplite-s3-integration"):
+    def __init__(self, root="/videoStreams/", host="0.0.0.0", port=1935, logger="/var/log/rtmplite/main.log", s3config="/etc/.rtmplite-s3-integration", test=False):
         self.root = root
         self.host = host
         self.port = port
         self.logger = logger
         self.s3config = s3config
+        self.test = test
 
     def run(self):
         self.initLogging()
+        Storage.test = self.test
         Storage.loadConfig(self.s3config)
         self.uploadRemain()
         self.startRtmp()
 
     def uploadRemain(self):
+        if self.test: return
         for r,d,f in os.walk(self.root):
             for files in f:
                 if files.endswith("flv"):
@@ -50,7 +53,7 @@ class App():
         fh.setLevel(logging.INFO)
         # create a handler to output stdout
         ch = logging.StreamHandler()
-        ch.setLevel(logging.INFO)
+        ch.setLevel(logging.DEBUG)
         #init the formatter
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
@@ -64,4 +67,4 @@ if __name__=="__main__":
     if sys.platform.find("win")==-1 :
         App().run()
     else :
-        App(root=r"D://schoolshape/Red5/webapps/recorder-test/videoStreams/",logger=r"C://Users/Administrator/Desktop/temp/rtmplog.log",s3config="S3.ini").run()
+        App(root=r"D://schoolshape/Red5/webapps/recorder-test/videoStreams/",logger=r"C://Users/Administrator/Desktop/temp/rtmplog.log",s3config=r"C://Users/Administrator/S3.ini", test=True).run()
