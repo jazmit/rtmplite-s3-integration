@@ -801,15 +801,26 @@ class Stream(object):
         if self.recordfile is not None:
             self.recordfile.close()
             self.recordfile = None
-
-            log.debug((self, 'storage ' + self.name + '.flv'))
-            thread.start_new_thread(Storage(self.name+'.flv').upload, ())
+            '''Upload reocredfile to s3 and send a Message'''
+            storage = Storage(self.name+'.flv')
+            thread.start_new_thread(storage.upload, ())
+            uploadedRsp = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.S3Upload.Success', description="", details=None)])
+            multitask.add(self.checkUploadAndSend(uploadedRsp, storage, self.client))
 
         if self.playfile is not None: self.playfile.close(); self.playfile = None
         response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Unpublish.Success', description="", details=None)])
         multitask.add(self.clientSend(response, self.client))
+              
         self.client = None # to clear the reference
-          
+    
+    def checkUploadAndSend(self, msg, storage, client):
+        '''Method to check the 's3upload' and then send a Message or Command on this stream.'''
+        for i in range(10):
+            if storage.hasUpload(): break
+            yield multitask.sleep(0.5)
+            
+        yield self.clientSend(msg, client)
+    
     def __repr__(self):
         return self._name;
     
@@ -822,6 +833,7 @@ class Stream(object):
             msg = msg.toMessage()
         msg.streamId = self.id
         # if _debug: print self,'send'
+        log.debug((self, 'clientSend ', msg))
         yield client.writeMessage(msg)
         
     def send(self, msg):

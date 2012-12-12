@@ -70,7 +70,7 @@ if __name__=="__main__":
     if sys.platform.find("win")==-1 :
         App().run()
     else :
-        #localhost mock s3VideoStreams
+        '''Mock s3VideoStreams'''
         rtmplitePath = r"D://schoolshape/rtmplite/"
         mockS3Path = r"D://schoolshape/s3VideoStreams/"
         App(root=rtmplitePath+r"videoStreams/", logger=rtmplitePath+"main.log", s3config=rtmplitePath+"S3.ini", s3Path=mockS3Path, test=True).run()

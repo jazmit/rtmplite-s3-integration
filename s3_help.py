@@ -41,9 +41,9 @@ class Storage():
         
     def startUpload(self):
         if Storage.test :
-            #localhost mock s3upload
+            ''''Mock upload file to s3'''
+            time.sleep(3)
             shutil.copyfile(self.getLocalFileFullname(), self.getS3FileFullname())
-            time.sleep(5)
         else :
             self.getKey().set_contents_from_filename(self.filename)
             self.closeKey()
@@ -72,13 +72,16 @@ class Storage():
         command = r'ffmpeg -metadata videocodecid="" -vn -acodec copy -y -i ' + localFileFullname + ' ' + localFileFullname
         os.system(command)
 
-    def upload(self, failTimes=3, cb=None):
+    def hasUpload(self):
+        localFileFullname = self.getLocalFileFullname()
+        return os.path.isfile(localFileFullname+'.uploaded') and not os.path.isfile(localFileFullname)
+
+    def upload(self, failTimes=3):
         """
         upload fp to S3 by filename and try 'failTimes' to upload if failed.
         
         Arguments:
         - `failTimes`: defaul try 3 times if upload failed
-        - `cb`: callbackFun
         """
         log.info("start upload " + self.getLocalFileFullname() + " to " + self.getS3FileFullname())
         for i in range(failTimes):
@@ -90,7 +93,6 @@ class Storage():
                 if os.path.isfile(uploadedFullname): os.remove(uploadedFullname)
                 os.rename(self.getLocalFileFullname(), uploadedFullname)
                 log.debug(('upload succeeded: ', self.filename, ', failed: ', i, ', spent: ', time.time()-start))
-                if cb is not None and callable(cb): cb()
             except (Exception) , e:
                 log.info(("upload failed: ", self.filename , ', failed: ', i, 'exception: ', e))
             else :
