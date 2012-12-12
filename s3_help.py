@@ -16,8 +16,11 @@ class Storage():
     test = False
     
     def __init__(self, filename):
-        self.filename = filename
         self.key = None
+        self.filename = filename
+        self.localFileFullname = Storage.localPath + self.filename
+        self.bucketName = ('private' if 'private' in self.filename else 'public') + '.media.schoolshape.com'
+        self.s3FileFullname = Storage.s3Path + self.bucketName + r'/' + self.filename
     
     @staticmethod 
     def loadConfig(configPath):
@@ -28,24 +31,14 @@ class Storage():
             Storage.accessKey = config.get("Credentials","aws_access_key_id")
             Storage.secretKey = config.get("Credentials","aws_secret_access_key")
             log.info('loading accessKey & secretKey from ' + configPath)
-
-    def getLocalFileFullname(self):
-        return Storage.localPath + self.filename
-    
-    def getBucketName(self):
-        bucketName = 'private' if 'private' in self.filename else 'public'
-        return bucketName + '.media.schoolshape.com'
-    
-    def getS3FileFullname(self):
-        return Storage.s3Path + self.getBucketName() + r'/' + self.filename
         
     def startUpload(self):
         if Storage.test :
             ''''Mock upload file to s3'''
             time.sleep(3)
-            shutil.copyfile(self.getLocalFileFullname(), self.getS3FileFullname())
+            shutil.copyfile(self.localFileFullname, self.s3FileFullname)
         else :
-            self.getKey().set_contents_from_filename(self.filename)
+            self.getKey().set_contents_from_filename(self.localFileFullname)
             self.closeKey()
 
     # def uploadByFile(self, fp, cb=None):
@@ -61,7 +54,7 @@ class Storage():
     def getKey(self):
         if self.key is None:
             conn = S3Connection(Storage.accessKey, Storage.secretKey)
-            bucket = conn.get_bucket(self.getBucketName())
+            bucket = conn.get_bucket(self.bucketName)
             key = bucket.get_key(self.filename)
             if key is None: key = bucket.new_key(self.filename)
             self.key = key
@@ -73,8 +66,7 @@ class Storage():
         os.system(command)
 
     def hasUpload(self):
-        localFileFullname = self.getLocalFileFullname()
-        return os.path.isfile(localFileFullname+'.uploaded') and not os.path.isfile(localFileFullname)
+        return os.path.isfile(self.localFileFullname+'.uploaded') and not os.path.isfile(self.localFileFullname)
 
     def upload(self, failTimes=3):
         """
@@ -83,15 +75,15 @@ class Storage():
         Arguments:
         - `failTimes`: defaul try 3 times if upload failed
         """
-        log.info("start upload " + self.getLocalFileFullname() + " to " + self.getS3FileFullname())
+        log.info("start upload " + self.localFileFullname + " to " + self.s3FileFullname)
         for i in range(failTimes):
             try:
                 start = time.time()
                 if self.filename.find(r'/audio/')>-1 and self.filename.endswith("flv"): self.tidyFileWithFfmpeg()
                 self.startUpload()
-                uploadedFullname = self.getLocalFileFullname()+'.uploaded'
+                uploadedFullname = self.localFileFullname+'.uploaded'
                 if os.path.isfile(uploadedFullname): os.remove(uploadedFullname)
-                os.rename(self.getLocalFileFullname(), uploadedFullname)
+                os.rename(self.localFileFullname, uploadedFullname)
                 log.debug(('upload succeeded: ', self.filename, ', failed: ', i, ', spent: ', time.time()-start))
             except (Exception) , e:
                 log.info(("upload failed: ", self.filename , ', failed: ', i, 'exception: ', e))
