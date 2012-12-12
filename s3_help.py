@@ -61,8 +61,7 @@ class Storage():
         return self.key
     
     def tidyFileWithFfmpeg(self):
-        localFileFullname = self.getLocalFileFullname()
-        command = 'ffmpeg -i %s -metadata videocodecid="" -vn -acodec copy -y %s' % (localFileFullname, localFileFullname)
+        command = 'ffmpeg -i %s -metadata videocodecid="" -vn -acodec copy -y %s' % (self.localFileFullname, self.localFileFullname)
         os.system(command)
 
     def hasUpload(self):
