@@ -801,10 +801,9 @@ class Stream(object):
         if self.recordfile is not None:
             self.recordfile.close()
             self.recordfile = None
-                    
-            def doUpload(r, f):
-                Storage(r).upload(f, 3)
-            thread.start_new_thread(doUpload, (self.name+'.flv', self.filename))
+
+            log.debug((self, 'storage ' + self.name + '.flv'))
+            thread.start_new_thread(Storage(self.name+'.flv').upload, ())
 
         if self.playfile is not None: self.playfile.close(); self.playfile = None
         response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Unpublish.Success', description="", details=None)])
