@@ -804,8 +804,8 @@ class Stream(object):
             '''Upload reocredfile to s3 and send a Message'''
             storage = Storage(self.name+'.flv')
             thread.start_new_thread(storage.upload, ())
-            uploadedRsp = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.S3Upload.Success', description="", details=None)])
-            multitask.add(self.checkUploadAndSend(uploadedRsp, storage, self.client))
+            response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Record.Stop', description="", details=None)])
+            multitask.add(self.checkUploadAndSend(response, storage, self.client))
 
         if self.playfile is not None: self.playfile.close(); self.playfile = None
         response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Unpublish.Success', description="", details=None)])
@@ -1297,6 +1297,9 @@ class FlashServer(object):
             yield inst.publishNotify(stream)
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='status', code='NetStream.Publish.Start', description='', details=None)])
             yield stream.send(response)
+            if stream.mode != 'live': 
+                response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='status', code='NetStream.Record.Start', description='', details=None)])
+                yield stream.send(response)
         except ValueError, E: # some error occurred. inform the app.
             log.debug(('error in publishing stream', str(E)))
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='error',code='NetStream.Publish.BadName',description=str(E),details=None)])
