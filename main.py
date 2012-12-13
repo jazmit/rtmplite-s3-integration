@@ -18,7 +18,8 @@ class App():
             
         self.host = config.get('Host','host')
         self.port = config.getint('Host','port')     
-        self.logger = config.get('Path','logger')
+        self.logger = config.get('Log','logger')
+        self.debug = config.getboolean('Log','debug')
                 
         Storage.root = self.root = config.get('Path','root')
         Storage.loadConfig(config.get('Path', 's3_ini'))
@@ -51,20 +52,20 @@ class App():
     def initLogging(self):
         #create a logger
         logger = logging.getLogger('__main__')
-        logger.setLevel(logging.DEBUG)
-        #create a handler to write log
-        fh = logging.FileHandler(self.logger)
-        fh.setLevel(logging.INFO)
-        # create a handler to output stdout
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
+        logger.setLevel(logging.INFO)
         #init the formatter
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        ch.setFormatter(formatter)
-    
-        logger.addHandler(ch)
-        logger.addHandler(fh)
+        #create handler(s) to write log
+        infoHandler = logging.FileHandler(self.logger)
+        infoHandler.setLevel(logging.INFO)
+        infoHandler.setFormatter(formatter)
+        logger.addHandler(infoHandler)
+        if self.debug:
+            logger.setLevel(logging.DEBUG)
+            debugHandler = logging.StreamHandler()
+            debugHandler.setLevel(logging.DEBUG)
+            debugHandler.setFormatter(formatter) 
+            logger.addHandler(debugHandler)
 
 if __name__=="__main__":
     App().run()
