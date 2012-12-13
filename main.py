@@ -24,7 +24,7 @@ class App():
         Storage.localPath = self.root
         Storage.s3Path = self.s3Path
         Storage.loadConfig(self.s3config)
-        self.uploadRemain()
+        # self.uploadRemain()
         self.startRtmp()
 
     #TODO
@@ -61,8 +61,7 @@ class App():
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
         ch.setFormatter(formatter)
-    
-        logger.addHandler(ch)
+        if self.test: logger.addHandler(ch)
         logger.addHandler(fh)
 
 if __name__=="__main__":

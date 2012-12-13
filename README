@@ -16,10 +16,12 @@ This application will upload the recorde file to S3 automatically.
 If you wanted to recorde stream with rtmpt procotol, type `python
 rtmpt.py -h` for more details.
 
-Logging file is stored in `/var/log/rtmplite.log`.
+Logging file is stored in `/var/log/rtmplite/rtmplite.log`.
+
+---- init for schoolshape
 
 install script:
-apt-get install git python-pip -y
+apt-get install git python-pip ffmpeg -y
 
 pip install boto
 
@@ -33,4 +35,36 @@ nohup python /usr/local/share/rtmplite-s3-integration/main.py > /dev/null 2> /de
 nohup python /usr/local/share/rtmplite-s3-integration/rtmpt.py -l 0.0.0.0:5081 > /dev/null 2> /dev/null &
 
 ## add this line to /etc/crontab
-11 5    * * *   root    rm -f `find /videoStreams -name *.flv -mtime +30`
+11 5    * * *   root    rm -f `find /videoStreams -name *.uploaded -mtime +30`
+30 5    * * *   root    rm -f `find /videoStreams -mtime +60`
+
+mkdir /var/log/rtmplite/ -p
+chmod a+w /var/log/rtmplite/
+
+mkdir -p /videoStreams/public
+mkdir -p /videoStreams/public/logo
+mkdir -p /videoStreams/public/logo/video
+mkdir -p /videoStreams/public/logo/image
+mkdir -p /videoStreams/public/logo/audio
+mkdir -p /videoStreams/public/logo/flash
+
+mkdir -p /videoStreams/public/sheet
+mkdir -p /videoStreams/public/sheet/video
+mkdir -p /videoStreams/public/sheet/image
+mkdir -p /videoStreams/public/sheet/audio
+mkdir -p /videoStreams/public/sheet/flash
+
+mkdir -p /videoStreams/private
+mkdir -p /videoStreams/private/answer
+mkdir -p /videoStreams/private/answer/video
+mkdir -p /videoStreams/private/answer/image
+mkdir -p /videoStreams/private/answer/audio
+mkdir -p /videoStreams/private/answer/flash
+
+mkdir -p /videoStreams/private/exam
+mkdir -p /videoStreams/private/exam/video
+mkdir -p /videoStreams/private/exam/image
+mkdir -p /videoStreams/private/exam/audio
+mkdir -p /videoStreams/private/exam/flash
+
+chmod -R a+wr /videoStreams
