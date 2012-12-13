@@ -9,11 +9,11 @@ Then you must config the S3.ini with S3 identity.
 
 To run schoolshape rtmplite by typing `python main.py` using default config.
 
-If you want to run this app manually, type `python rtmp.py -h` for more details to run trmplite.
+If you want to run this app manually, type `python rtmp.py -h` for more details to run rtmplite.
 
-This application will upload the recorde file to S3 automatically.
+This application will upload the recorded file to S3 automatically.
 
-If you wanted to recorde stream with rtmpt procotol, type `python
+If you wanted to record stream with rtmpt procotol, type `python
 rtmpt.py -h` for more details.
 
 Logging file is stored in `/var/log/rtmplite.log`.

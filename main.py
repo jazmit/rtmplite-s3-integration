@@ -1,3 +1,4 @@
+from ConfigParser import ConfigParser
 import  multitask, time, os, logging
 from s3_help import Storage
 from rtmp import FlashServer
@@ -9,21 +10,21 @@ class App():
     main app for schoolshape run rtmplite
     """
     
-    def __init__(self, root=r"/videoStreams/", host="0.0.0.0", port=1935, logger=r"/var/log/rtmplite/main.log", s3config=r"/etc/.rtmplite-s3-integration", s3Path="", test=False):
-        self.root = root
-        self.host = host
-        self.port = port
-        self.logger = logger
-        self.s3config = s3config
-        self.s3Path = s3Path
-        self.test = test
+    __config__ = 'config.ini'
+    
+    def __init__(self):
+        config = ConfigParser()
+        config.read(App.__config__)
+            
+        self.host = config.get('Host','host')
+        self.port = config.getint('Host','port')     
+        self.logger = config.get('Path','logger')
+                
+        Storage.root = self.root = config.get('Path','root')
+        Storage.loadConfig(config.get('Path', 's3_ini'))
         
     def run(self):
         self.initLogging()
-        Storage.test = self.test
-        Storage.localPath = self.root
-        Storage.s3Path = self.s3Path
-        Storage.loadConfig(self.s3config)
         self.uploadRemain()
         self.startRtmp()
 
@@ -66,11 +67,4 @@ class App():
         logger.addHandler(fh)
 
 if __name__=="__main__":
-    import sys
-    if sys.platform.find("win")==-1 :
-        App().run()
-    else :
-        '''Mock s3VideoStreams'''
-        rtmplitePath = r"D://schoolshape/rtmplite/"
-        mockS3Path = r"D://schoolshape/s3VideoStreams/"
-        App(root=rtmplitePath+r"videoStreams/", logger=rtmplitePath+"main.log", s3config=rtmplitePath+"S3.ini", s3Path=mockS3Path, test=True).run()
+    App().run()

@@ -8,38 +8,42 @@ class Storage():
     """
     operate s3 upload and download
     """
-    localPath = "";
-    s3Path = "";
-    CONFIGFILE = None
-    accessKey = None
+    root = "";
+    bucket_public = ""
+    bucket_private = ""
     secretKey = None
-    test = False
+    hasKey = False
     
     def __init__(self, filename):
         self.key = None
         self.filename = filename
-        self.localFileFullname = Storage.localPath + self.filename
-        self.bucketName = ('private' if 'private' in self.filename else 'public') + '.media.schoolshape.com'
-        self.s3FileFullname = Storage.s3Path + self.bucketName + r'/' + self.filename
+        self.localFileFullname = Storage.root + self.filename
+        self.isAudioFlv = r'/audio/' in self.filename and self.filename.endswith(".flv")
+        
+        self.bucketName = (Storage.bucket_private if self.filename.startswith('private') else Storage.bucket_public)
+        self.s3FileFullname = self.bucketName + r'/' + self.filename
     
     @staticmethod 
     def loadConfig(configPath):
-        if configPath is not None and Storage.CONFIGFILE!=configPath:
-            Storage.CONFIGFILE = configPath
+        if configPath != '' :
             config = ConfigParser()
-            config.read(Storage.CONFIGFILE)
-            Storage.accessKey = config.get("Credentials","aws_access_key_id")
-            Storage.secretKey = config.get("Credentials","aws_secret_access_key")
+            config.read(configPath)
+            Storage.bucket_public = config.get('Bucket', 'public')
+            Storage.bucket_private = config.get('Bucket', 'private')
+            Storage.accessKey = config.get('Credentials','aws_access_key_id')
+            Storage.secretKey = config.get('Credentials','aws_secret_access_key')
+            Storage.hasKey = Storage.accessKey!='' and Storage.secretKey!=''
             log.info('loading accessKey & secretKey from ' + configPath)
         
     def startUpload(self):
-        if Storage.test :
+        if Storage.hasKey :
+            self.getKey().set_contents_from_filename(self.localFileFullname)
+            self.closeKey()
+        else :
             ''''Mock upload file to s3'''
             time.sleep(3)
             shutil.copyfile(self.localFileFullname, self.s3FileFullname)
-        else :
-            self.getKey().set_contents_from_filename(self.localFileFullname)
-            self.closeKey()
+            
 
     # def uploadByFile(self, fp, cb=None):
     #     self.getKey().set_contents_from_file(fp, rewind=True)
@@ -78,7 +82,7 @@ class Storage():
         for i in range(failTimes):
             try:
                 start = time.time()
-                if self.filename.find(r'/audio/')>-1 and self.filename.endswith("flv"): self.tidyFileWithFfmpeg()
+                if self.isAudioFlv: self.tidyFileWithFfmpeg()
                 self.startUpload()
                 uploadedFullname = self.localFileFullname+'.uploaded'
                 if os.path.isfile(uploadedFullname): os.remove(uploadedFullname)
