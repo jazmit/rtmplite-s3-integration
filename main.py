@@ -19,7 +19,8 @@ class App():
         self.host = config.get('Host','host')
         self.port = config.getint('Host','port')     
         self.logger = config.get('Log','logger')
-        self.debug = config.getboolean('Log','debug')
+        self.log_debug = config.getboolean('Log','debug')
+        self.log_screen = config.getboolean('Log','screen')
                 
         Storage.root = self.root = config.get('Path','root')
         Storage.loadConfig(config.get('Path', 's3_ini'))
@@ -60,8 +61,9 @@ class App():
         infoHandler.setLevel(logging.INFO)
         infoHandler.setFormatter(formatter)
         logger.addHandler(infoHandler)
-        if self.debug:
+        if self.log_debug:
             logger.setLevel(logging.DEBUG)
+        if self.log_screen:    
             debugHandler = logging.StreamHandler()
             debugHandler.setLevel(logging.DEBUG)
             debugHandler.setFormatter(formatter) 

@@ -65,6 +65,7 @@ class Storage():
         return self.key
     
     def tidyFileWithFfmpeg(self):
+        '''audio only flv playback bug  -  Adobe Flash Player 11.2  -  Bug 3156305'''
         command = 'ffmpeg -i %s -metadata videocodecid="" -vn -acodec copy -y %s' % (self.localFileFullname, self.localFileFullname)
         os.system(command)
 
@@ -87,7 +88,7 @@ class Storage():
                 uploadedFullname = self.localFileFullname+'.uploaded'
                 if os.path.isfile(uploadedFullname): os.remove(uploadedFullname)
                 os.rename(self.localFileFullname, uploadedFullname)
-                log.debug(('upload succeeded: ', self.filename, ', failed: ', i, ', spent: ', time.time()-start))
+                log.info(('upload succeeded: ', self.filename, ', failed: ', i, ', spent: ', time.time()-start))
             except (Exception) , e:
                 log.info(("upload failed: ", self.filename , ', failed: ', i, 'exception: ', e))
             else :
