@@ -10,7 +10,8 @@ class App():
     main app for schoolshape run rtmplite
     """
     
-    __config__ = 'config.ini'
+    dirname = os.path.dirname(os.path.abspath(__file__)) + "/"
+    __config__ = dirname + 'config.ini'
     
     def __init__(self):
         config = ConfigParser()
@@ -23,7 +24,7 @@ class App():
         self.log_screen = config.getboolean('Log','screen')
                 
         Storage.root = self.root = config.get('Path','root')
-        Storage.loadConfig(config.get('Path', 's3_ini'))
+        Storage.loadConfig(App.dirname + config.get('Path', 's3_ini'))
         
     def run(self):
         self.initLogging()
