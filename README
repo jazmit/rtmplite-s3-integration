@@ -21,11 +21,12 @@ Logging file is stored in `/var/log/rtmplite/rtmplite.log`.
 ---- init for schoolshape
 
 install script:
+
 apt-get install git python-pip ffmpeg -y
 
 pip install boto
 
-git pull https://github.com/jamesinchina/rtmplite-s3-integration.git
+git clone https://github.com/jamesinchina/rtmplite-s3-integration.git
 
 mv rtmplite-s3-integration /usr/local/share/
 
@@ -35,8 +36,8 @@ nohup python /usr/local/share/rtmplite-s3-integration/main.py > /dev/null 2> /de
 nohup python /usr/local/share/rtmplite-s3-integration/rtmpt.py -l 0.0.0.0:5081 > /dev/null 2> /dev/null &
 
 ## add this line to /etc/crontab
-11 5    * * *   root    rm -f `find /videoStreams -name *.uploaded -mtime +30`
-30 5    * * *   root    rm -f `find /videoStreams -mtime +60`
+11 5    * * *   root    /bin/rm -f `/usr/bin/find /videoStreams -name *.uploaded -mtime +30`
+30 5    * * *   root    /bin/rm -f `/usr/bin/find /videoStreams -mtime +60`
 
 mkdir /var/log/rtmplite/ -p
 chmod a+w /var/log/rtmplite/
@@ -68,3 +69,11 @@ mkdir -p /videoStreams/private/exam/audio
 mkdir -p /videoStreams/private/exam/flash
 
 chmod -R a+wr /videoStreams
+
+
+To start rtmps:
+apt-get install stunnel
+stunnel.conf:
+   [rtmps]
+   accept = 443
+   connect = 5081
