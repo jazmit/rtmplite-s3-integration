@@ -38,6 +38,7 @@ class Storage():
     def startUpload(self):
         if Storage.hasKey :
             self.getKey().set_contents_from_filename(self.localFileFullname)
+            self.getKey().set_acl('public-read')
             self.closeKey()
         else :
             ''''Mock upload file to s3'''
