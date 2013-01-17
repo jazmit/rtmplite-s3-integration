@@ -64,6 +64,7 @@ class App():
         logger.addHandler(infoHandler)
         if self.log_debug:
             logger.setLevel(logging.DEBUG)
+            infoHandler.setLevel(logging.DEBUG)
         if self.log_screen:    
             debugHandler = logging.StreamHandler()
             debugHandler.setLevel(logging.DEBUG)
