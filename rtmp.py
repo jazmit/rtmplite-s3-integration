@@ -1287,7 +1287,7 @@ class FlashServer(object):
             if stream.name and '?' in stream.name: stream.name = stream.name.partition('?')[0]
             inst = self.clients[stream.client.path][0]
             if (stream.name in inst.publishers):
-                self.closehandler(inst.publishers[stream.name], None, Flase)
+                self.closehandler(inst.publishers[stream.name], None, False)
                 #self.closehandler(inst.publishers[stream.name])
                 log.debug('Stream name already in use')
             inst.publishers[stream.name] = stream # store the client for publisher
