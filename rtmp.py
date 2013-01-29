@@ -796,16 +796,17 @@ class Stream(object):
         self._name = 'Stream[' + str(Stream.count) + ']'; Stream.count += 1
         log.debug((self, 'created'))
 
-    def close(self):
+    def close(self, upload=True):
         log.debug((self, 'closing'))
         if self.recordfile is not None:
             self.recordfile.close()
             self.recordfile = None
             '''Upload reocredfile to s3 and send a Message'''
-            storage = Storage(self.name+'.flv')
-            thread.start_new_thread(storage.upload, ())
-            response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Record.Stop', description="", details=None)])
-            multitask.add(self.checkUploadAndSend(response, storage, self.client))
+            if upload:
+                storage = Storage(self.name+'.flv')
+                thread.start_new_thread(storage.upload, ())
+                response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Record.Stop', description="", details=None)])
+                multitask.add(self.checkUploadAndSend(response, storage, self.client))
 
         if self.playfile is not None: self.playfile.close(); self.playfile = None
         response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Unpublish.Success', description="", details=None)])
@@ -1202,7 +1203,7 @@ class FlashServer(object):
         except: 
             log.debug(('clientlistener exception', (sys and sys.exc_info() or None)))
             
-    def closehandler(self, stream, cmd=None):
+    def closehandler(self, stream, cmd=None, upload=True):
         '''A stream is closed explicitly when a closeStream command is received from given client.'''
         if stream.client is not None:
             inst = self.clients[stream.client.path][0]
@@ -1215,7 +1216,7 @@ class FlashServer(object):
                 inst.players[stream.name].remove(stream)
                 if len(inst.players[stream.name]) == 0:
                     del inst.players[stream.name]
-            stream.close()
+            stream.close(upload)
 
     def clienthandler(self, client, cmd):
         '''A generator to handle a single command on the client.'''
@@ -1286,9 +1287,9 @@ class FlashServer(object):
             if stream.name and '?' in stream.name: stream.name = stream.name.partition('?')[0]
             inst = self.clients[stream.client.path][0]
             if (stream.name in inst.publishers):
-                log.error('Stream name already in use ' + stream.name)
+                self.closehandler(inst.publishers[stream.name], None, Flase)
                 #self.closehandler(inst.publishers[stream.name])
-                #raise ValueError, 'Stream name already in use'
+                log.debug('Stream name already in use')
             inst.publishers[stream.name] = stream # store the client for publisher
             inst.onPublish(stream.client, stream)
             
