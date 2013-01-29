@@ -1,5 +1,5 @@
 from ConfigParser import ConfigParser
-import  multitask, time, os, logging
+import  multitask, time, os, logging, sys
 from s3_help import Storage
 from rtmp import FlashServer
 
@@ -10,7 +10,7 @@ class App():
     main app for schoolshape run rtmplite
     """
     
-    dirname = os.path.dirname(os.path.abspath(__file__)) + "/"
+    dirname = os.path.dirname(os.path.abspath(sys.argv[0])) + "/"
     __config__ = dirname + 'config.ini'
     
     def __init__(self):
