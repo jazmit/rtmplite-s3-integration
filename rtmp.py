@@ -643,7 +643,7 @@ class FLV(object):
     '''An FLV file which converts between RTMP message and FLV tags.'''
     def __init__(self):
         self.fname = self.fp = self.type = None
-        self.tsp = self.tsr = 0; self.tsr0 = None
+        self.duration = self.tsp = self.tsr = 0; self.tsr0 = None
     
     def open(self, path, type='read', mode=0775):
         '''Open the file for reading (type=read) or writing (type=record or append).'''
@@ -679,7 +679,7 @@ class FLV(object):
     
     def close(self):
         '''Close the underlying file for this object.'''
-        log.debug('closing flv file')
+        log.debug(('closing flv file ', self.type , self.tsr0))
         if self.type in ('record', 'append') and self.tsr0 is not None:
             self.writeDuration((self.tsr - self.tsr0)/1000.0)
         if self.fp is not None: 
@@ -692,8 +692,12 @@ class FLV(object):
         try: os.unlink(path)
         except: pass
         
+    def getDuration(self):
+        return self.duration
+        
     def writeDuration(self, duration):
         log.debug(('writing duration', duration))
+        self.duration = duration
         output = amf.BytesIO()
         amfWriter = amf.AMF0(output) # TODO: use AMF3 if needed
         amfWriter.write('onMetaData')
@@ -712,6 +716,7 @@ class FLV(object):
 #        if message.type == Message.VIDEO:
 #            self.videostarted = True
 #        elif not hasattr(self, "videostarted"): return
+#        log.debug(('write flv file ', message.type , self.tsr0))
         if message.type == Message.AUDIO or message.type == Message.VIDEO:
             length, ts = message.size, message.time
             #if _debug: print 'FLV.write()', message.type, ts
@@ -800,12 +805,13 @@ class Stream(object):
         log.debug((self, 'closing'))
         if self.recordfile is not None:
             self.recordfile.close()
+            log.debug((self, 'Record File Duration: ', self.recordfile.getDuration()))
             self.recordfile = None
             '''Upload reocredfile to s3 and send a Message'''
             if upload:
                 storage = Storage(self.name+'.flv')
                 thread.start_new_thread(storage.upload, ())
-                response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Record.Stop', description="", details=None)])
+                response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Record.Stop', description="", details=None, duration=storage.getFileDuration())])
                 multitask.add(self.checkUploadAndSend(response, storage, self.client))
 
         if self.playfile is not None: self.playfile.close(); self.playfile = None
