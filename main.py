@@ -36,10 +36,13 @@ class App():
         for r,d,f in os.walk(self.root):
             for files in f:
                 if files.endswith("flv"):
-                    fullname = os.path.join(r, files)
-                    filename = fullname[len(self.root):]
-                    Storage(filename).upload()
-
+                    try:
+                        fullname = os.path.join(r, files)
+                        filename = fullname[len(self.root):]
+                        Storage(filename).upload()
+                    except (Exception) , e:
+                        log.warn(("Unable to upload ", filename))
+                    
     def startRtmp(self):
         try:
             agent = FlashServer()
