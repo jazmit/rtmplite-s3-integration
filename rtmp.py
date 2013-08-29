@@ -78,10 +78,10 @@ class SockStream(object):
     def __init__(self, sock):
         self.sock, self.buffer = sock, ''
         self.bytesWritten = self.bytesRead = 0
-    
+
     def close(self):
         self.sock.close()
-        
+
     def read(self, count):
         try:
             while True:
@@ -96,10 +96,10 @@ class SockStream(object):
                 self.buffer += data
         except StopIteration: raise
         except: raise ConnectionClosed # anything else is treated as connection closed.
-        
+
     def unread(self, data):
         self.buffer = data + self.buffer
-            
+
     def write(self, data):
         while len(data) > 0: # write in 4K chunks each time
             chunk, data = data[:4096], data[4096:]
@@ -107,7 +107,7 @@ class SockStream(object):
             if _debug: print 'socket.write[%d] %r'%(len(chunk), truncate(chunk))
             try: yield multitask.send(self.sock, chunk)
             except: raise ConnectionClosed
-                                
+
 
 '''
 NOTE: Here is a part of the documentation to understand how the Chunks' headers work.
@@ -125,7 +125,7 @@ This are the formats of the basic header:
 
  0 1 2 3 4 5 6 7      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
 +-+-+-+-+-+-+-+-+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|fmt|   cs id   |    |fmt|     0     |   cs id - 64  |    |fmt|     1     |        cs id - 64             | 
+|fmt|   cs id   |    |fmt|     0     |   cs id - 64  |    |fmt|     1     |        cs id - 64             |
 +-+-+-+-+-+-+-+-+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
   (cs id < 64)            (64 <= cs id < 320)                           (320 <= cs id)
@@ -138,7 +138,7 @@ Type 0 (fmt=00):
 
 This type MUST be used at the start of a chunk stream, and whenever the stream timestamp goes backward (e.g., because of a backward seek).
 
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                      timestamp                |                message length                 |message type id|                message stream id              |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -149,7 +149,7 @@ Type 1 (fmt=01):
 
 Streams with variable-sized messages (for example, many video formats) SHOULD use this format for the first chunk of each new message after the first.
 
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5  
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                timestamp delta                |                message length                 |message type id|
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -158,9 +158,9 @@ Streams with variable-sized messages (for example, many video formats) SHOULD us
 Type 2 (fmt=10):
 ----------------
 
-Streams with constant-sized messages (for example, some audio and data formats) SHOULD use this format for the first chunk of each message after the first. 
+Streams with constant-sized messages (for example, some audio and data formats) SHOULD use this format for the first chunk of each message after the first.
 
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3   
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                timestamp delta                |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -175,10 +175,10 @@ the preceding chunk. When a single message is split into chunks, all chunks of a
 Extended Timestamp:
 -------------------
 
-This field is transmitted only when the normal time stamp in the chunk message header is set to 0x00ffffff. If normal time stamp is 
-set to any value less than 0x00ffffff, this field MUST NOT be present. This field MUST NOT be present if the timestamp field is not 
+This field is transmitted only when the normal time stamp in the chunk message header is set to 0x00ffffff. If normal time stamp is
+set to any value less than 0x00ffffff, this field MUST NOT be present. This field MUST NOT be present if the timestamp field is not
 present. Type 3 chunks MUST NOT have this field. This field if transmitted is located immediately after the chunk message header
-and before the chunk data. 
+and before the chunk data.
 
 '''
 class Header(object):
@@ -187,23 +187,23 @@ class Header(object):
     # Chunk type 2 = TIME
     # Chunk type 3 = SEPARATOR
     FULL, MESSAGE, TIME, SEPARATOR, MASK = 0x00, 0x40, 0x80, 0xC0, 0xC0
-    
+
     def __init__(self, channel=0, time=0, size=None, type=None, streamId=0):
-        
+
         self.channel = channel   # in fact, this will be the fmt + cs id
         self.time = time         # timestamp[delta]
         self.size = size         # message length
         self.type = type         # message type id
         self.streamId = streamId # message stream id
-        
+
         if (channel < 64): self.hdrdata = struct.pack('>B', channel)
         elif (channel < 320): self.hdrdata = '\x00' + struct.pack('>B', channel-64)
         else: self.hdrdata = '\x01' + struct.pack('>H', channel-64)
-    
+
     def toBytes(self, control):
         data = chr(ord(self.hdrdata[0]) | control)
-        if len(self.hdrdata) >= 2: data += self.hdrdata[1:] 
-        
+        if len(self.hdrdata) >= 2: data += self.hdrdata[1:]
+
         # if the chunk type is not 3
         if control != Header.SEPARATOR:
             data += struct.pack('>I', self.time if self.time < 0xFFFFFF else 0xFFFFFF)[1:] # add time in 3 bytes
@@ -222,7 +222,7 @@ class Header(object):
     def __repr__(self):
         return ("<Header channel=%r time=%r size=%r type=%s (%r) streamId=%r>"
             % (self.channel, self.time, self.size, Message.type_name.get(self.type, 'unknown'), self.type, self.streamId))
-    
+
     def dup(self):
         return Header(channel=self.channel, time=self.time, size=self.size, type=self.type, streamId=self.streamId)
 
@@ -232,10 +232,10 @@ class Message(object):
     CHUNK_SIZE,   ABORT,   ACK,   USER_CONTROL, WIN_ACK_SIZE, SET_PEER_BW, AUDIO, VIDEO, DATA3, SHAREDOBJ3, RPC3, DATA, SHAREDOBJ, RPC, AGGREGATE = \
     0x01,         0x02,    0x03,  0x04,         0x05,         0x06,        0x08,  0x09,  0x0F,  0x10,       0x11, 0x12, 0x13,      0x14, 0x16
     type_name = dict(enumerate('unknown chunk-size abort ack user-control win-ack-size set-peer-bw unknown audio video unknown unknown unknown unknown unknown data3 sharedobj3 rpc3 data sharedobj rpc unknown aggregate'.split()))
-    
+
     def __init__(self, hdr=None, data=''):
         self.header, self.data = hdr or Header(), data
-    
+
     # define properties type, streamId and time to access self.header.(property)
     for p in ['type', 'streamId', 'time']:
         exec 'def _g%s(self): return self.header.%s'%(p, p)
@@ -243,17 +243,17 @@ class Message(object):
         exec '%s = property(fget=_g%s, fset=_s%s)'%(p, p, p)
     @property
     def size(self): return len(self.data)
-            
+
     def __repr__(self):
         return ("<Message header=%r data=%r>"% (self.header, truncate(self.data)))
-    
+
     def dup(self):
         return Message(self.header.dup(), self.data[:])
-                
+
 class Protocol(object):
     PING_SIZE, DEFAULT_CHUNK_SIZE, HIGH_WRITE_CHUNK_SIZE, PROTOCOL_CHANNEL_ID = 1536, 128, 4096, 2 # constants
     READ_WIN_SIZE, WRITE_WIN_SIZE = 1000000L, 1073741824L
-    
+
     def __init__(self, sock):
         self.stream = SockStream(sock)
         self.lastReadHeaders, self.incompletePackets, self.lastWriteHeaders = dict(), dict(), dict()
@@ -262,14 +262,14 @@ class Protocol(object):
         self.nextChannelId = Protocol.PROTOCOL_CHANNEL_ID + 1
         self._time0 = time.time()
         self.writeQueue = multitask.Queue()
-            
+
     @property
     def relativeTime(self):
         return int(1000*(time.time() - self._time0))
-    
+
     def messageReceived(self, msg): # override in subclass
         yield
-            
+
     def protocolMessage(self, msg):
         if msg.type == Message.ACK: # respond to ACK requests
             self.writeWinSize0 = struct.unpack('>L', msg.data)[0]
@@ -289,10 +289,10 @@ class Protocol(object):
                 response.time, response.type, response.data = self.relativeTime, Message.USER_CONTROL, struct.pack('>HI', 0, streamId)
                 yield self.writeMessage(response)
         yield
-        
+
     def connectionClosed(self):
         yield
-                            
+
     def parse(self):
         try:
             yield self.parseCrossDomainPolicyRequest() # check for cross domain policy
@@ -305,10 +305,10 @@ class Protocol(object):
             log.info( 'exception, closing connection')
             if _debug: traceback.print_exc()
             yield self.connectionClosed()
-                    
+
     def writeMessage(self, message):
         yield self.writeQueue.put(message)
-            
+
     def parseCrossDomainPolicyRequest(self):
         # read the request
         REQUEST = '<policy-file-request/>\x00'
@@ -323,17 +323,17 @@ class Protocol(object):
             raise ConnectionClosed
         else:
             yield self.stream.unread(data)
-            
+
     SERVER_KEY = '\x47\x65\x6e\x75\x69\x6e\x65\x20\x41\x64\x6f\x62\x65\x20\x46\x6c\x61\x73\x68\x20\x4d\x65\x64\x69\x61\x20\x53\x65\x72\x76\x65\x72\x20\x30\x30\x31\xf0\xee\xc2\x4a\x80\x68\xbe\xe8\x2e\x00\xd0\xd1\x02\x9e\x7e\x57\x6e\xec\x5d\x2d\x29\x80\x6f\xab\x93\xb8\xe6\x36\xcf\xeb\x31\xae'
     FLASHPLAYER_KEY = '\x47\x65\x6E\x75\x69\x6E\x65\x20\x41\x64\x6F\x62\x65\x20\x46\x6C\x61\x73\x68\x20\x50\x6C\x61\x79\x65\x72\x20\x30\x30\x31\xF0\xEE\xC2\x4A\x80\x68\xBE\xE8\x2E\x00\xD0\xD1\x02\x9E\x7E\x57\x6E\xEC\x5D\x2D\x29\x80\x6F\xAB\x93\xB8\xE6\x36\xCF\xEB\x31\xAE'
-    
+
     def parseHandshake(self):
         '''Parses the rtmp handshake'''
         data = (yield self.stream.read(Protocol.PING_SIZE + 1)) # bound version and first ping
         data = Protocol.handshakeResponse(data)
         yield self.stream.write(data)
         data = (yield self.stream.read(Protocol.PING_SIZE))
-    
+
     @staticmethod
     def handshakeResponse(data):
         # send both data parts before reading next ping-size, to work with ffmpeg
@@ -372,15 +372,15 @@ class Protocol(object):
             last_hash = Protocol._calculateHash(rand_bytes, hash[:32])
             output = chr(type) + handshake + rand_bytes + last_hash
             return output
-        
+
     @staticmethod
     def _calculateHash(msg, key): # Hmac-sha256
         return hmac.new(key, msg, hashlib.sha256).digest()
-        
+
     @staticmethod
     def _generateKeyPair(): # dummy key pair since we don't support encryption
         return (''.join([chr(random.randint(0, 255)) for i in xrange(128)]), '')
-        
+
     def parseMessages(self):
         '''Parses complete messages until connection closed. Raises ConnectionLost exception.'''
         CHANNEL_MASK = 0x3F
@@ -399,11 +399,11 @@ class Protocol(object):
                 self.lastReadHeaders[channel] = header
             else:
                 header = self.lastReadHeaders[channel]
-            
+
             if hdrtype < Header.SEPARATOR: # time or delta has changed
                 data = (yield self.stream.read(3))
                 header.time = struct.unpack('!I', '\x00' + data)[0]
-                
+
             if hdrtype < Header.TIME: # size and type also changed
                 data = (yield self.stream.read(3))
                 header.size = struct.unpack('!I', '\x00' + data)[0]
@@ -419,7 +419,7 @@ class Protocol(object):
                 if _debug: print 'extended time stamp', '%x'%(header.extendedTime,)
             else:
                 header.extendedTime = None
-                
+
             if hdrtype == Header.FULL:
                 header.currentTime = header.extendedTime or header.time
                 header.hdrtype = hdrtype
@@ -427,13 +427,13 @@ class Protocol(object):
                 header.hdrtype = hdrtype
 
             #print header.type, '0x%02x'%(hdrtype,), header.time, header.currentTime
-            
+
             # if _debug: print 'R', header, header.currentTime, header.extendedTime, '0x%x'%(hdrsize,)
-             
+
             data = self.incompletePackets.get(channel, "") # are we continuing an incomplete packet?
-            
+
             count = min(header.size - (len(data)), self.readChunkSize) # how much more
-            
+
             data += (yield self.stream.read(count))
 
             # check if we need to send Ack
@@ -443,7 +443,7 @@ class Protocol(object):
                     ack = Message()
                     ack.time, ack.type, ack.data = self.relativeTime, Message.ACK, struct.pack('>L', self.readWinSize0)
                     yield self.writeMessage(ack)
-                    
+
             if len(data) < header.size: # we don't have all data
                 self.incompletePackets[channel] = data
             else: # we have all data
@@ -458,7 +458,7 @@ class Protocol(object):
                         if _debug: print 'aggregated %r bytes message: readChunkSize(%r) x %r'%(len(data), self.readChunkSize, len(data) / self.readChunkSize)
                 else:
                     data, self.incompletePackets[channel] = data[:header.size], data[header.size:]
-                
+
                 hdr = Header(channel=header.channel, time=header.currentTime, size=header.size, type=header.type, streamId=header.streamId)
                 msg = Message(hdr, data)
 
@@ -479,30 +479,30 @@ class Protocol(object):
                         subtype = ord(aggdata[0])
                         subsize = struct.unpack('!I', '\x00' + aggdata[1:4])[0]
                         subtime = struct.unpack('!I', aggdata[4:8])[0]
-                        substreamid = struct.unpack('<I', aggdata[8:12])[0]     
+                        substreamid = struct.unpack('<I', aggdata[8:12])[0]
                         subheader = Header(channel, time=subtime, size=subsize, type=subtype, streamId=substreamid) # TODO: set correct channel
-                        aggdata = aggdata[11:] # skip header       
-                        submsgdata = aggdata[:subsize] # get message data 
-                        submsg = Message(subheader, submsgdata) 
-                        
+                        aggdata = aggdata[11:] # skip header
+                        submsgdata = aggdata[:subsize] # get message data
+                        submsg = Message(subheader, submsgdata)
+
                         yield self.parseMessage(submsg)
-                                        
+
                         aggdata = aggdata[subsize:] # skip message data
-                    
+
                         backpointer = struct.unpack('!I', aggdata[0:4])[0]
                         if backpointer != subsize:
                             log.worning(('Warning aggregate submsg backpointer=%r != %r' % (backpointer, subsize)))
                         aggdata = aggdata[4:] # skip back pointer, go to next message
                 else:
                     yield self.parseMessage(msg)
-                
+
 
     def parseMessage(self, msg):
-        try:            
+        try:
             if _debug: print 'Protocol.parseMessage msg=', msg
             if msg.header.channel == Protocol.PROTOCOL_CHANNEL_ID:
                 yield self.protocolMessage(msg)
-            else: 
+            else:
                 yield self.messageReceived(msg)
         except:
             log.debug(('Protocol.parseMessage exception', (traceback and traceback.print_exc() or None)))
@@ -514,11 +514,11 @@ class Protocol(object):
 #            message = self.writeQueue.get() # TODO this should be used using multitask.Queue and remove previous wait.
             message = yield self.writeQueue.get() # TODO this should be used using multitask.Queue and remove previous wait.
             if _debug : print ('Protocol.write msg=', message)
-            if message is None: 
+            if message is None:
                 try: self.stream.close()  # just in case TCP socket is not closed, close it.
                 except: pass
                 break
-            
+
             # get the header stored for the stream
             if self.lastWriteHeaders.has_key(message.streamId):
                 header = self.lastWriteHeaders[message.streamId]
@@ -528,7 +528,7 @@ class Protocol(object):
                 self.lastWriteHeaders[message.streamId] = header
             if message.type < Message.AUDIO:
                 header = Header(Protocol.PROTOCOL_CHANNEL_ID)
-               
+
             # now figure out the header data bytes
             if header.streamId != message.streamId or header.time == 0 or message.time <= header.time:
                 header.streamId, header.type, header.size, header.time, header.delta = message.streamId, message.type, message.size, message.time, message.time
@@ -539,7 +539,7 @@ class Protocol(object):
             else:
                 header.time, header.delta = message.time, message.time-header.time
                 control = Header.TIME
-            
+
             hdr = Header(channel=header.channel, time=header.delta if control in (Header.MESSAGE, Header.TIME) else header.time, size=header.size, type=header.type, streamId=header.streamId)
             assert message.size == len(message.data)
 
@@ -562,16 +562,16 @@ class Command(object):
     def __init__(self, type=Message.RPC, name=None, id=None, tm=0, cmdData=None, args=[]):
         '''Create a new command with given type, name, id, cmdData and args list.'''
         self.type, self.name, self.id, self.time, self.cmdData, self.args = type, name, id, tm, cmdData, args[:]
-        
+
     def __repr__(self):
         return ("<Command type=%r name=%r id=%r data=%r args=%r>" % (self.type, self.name, self.id, self.cmdData, self.args))
-    
+
     def setArg(self, arg):
         self.args.append(arg)
-    
+
     def getArg(self, index):
         return self.args[index]
-    
+
     @classmethod
     def fromMessage(cls, message):
         ''' initialize from a parsed RTMP message'''
@@ -579,13 +579,13 @@ class Command(object):
 
         length = len(message.data)
         if length == 0: raise ValueError('zero length message data')
-        
+
         if message.type == Message.RPC3 or message.type == Message.DATA3:
             assert message.data[0] == '\x00' # must be 0 in AMF3
             data = message.data[1:]
         else:
             data = message.data
-        
+
         amfReader = amf.AMF0(data)
 
         inst = cls()
@@ -605,7 +605,7 @@ class Command(object):
         except EOFError:
             pass
         return inst
-    
+
     def toMessage(self):
         msg = Message()
         assert self.type
@@ -644,7 +644,7 @@ class FLV(object):
     def __init__(self):
         self.fname = self.fp = self.type = None
         self.duration = self.tsp = self.tsr = 0; self.tsr0 = None
-    
+
     def open(self, path, type='read', mode=0775):
         '''Open the file for reading (type=read) or writing (type=record or append).'''
         if str(path).find('/../') >= 0 or str(path).find('\\..\\') >= 0: raise ValueError('Must not contain .. in name')
@@ -667,7 +667,7 @@ class FLV(object):
                 ts = (ts0 << 16) | (ts1 & 0x0ffff) | (ts2 << 24)
                 self.tsr1 = ts + 20; # some offset after the last packet
                 self.fp.seek(0, os.SEEK_END)
-        else: 
+        else:
             self.fp = open(path, 'rb')
             magic, version, flags, offset = struct.unpack('!3sBBI', self.fp.read(9))
             log.debug(('FLV.open() hdr=', magic, version, flags, offset))
@@ -675,26 +675,26 @@ class FLV(object):
             if version != 1: raise ValueError('Unsupported FLV file version')
             if offset > 9: self.fp.seek(offset-9, os.SEEK_CUR)
             self.fp.read(4) # ignore first previous tag size
-        return self 
-    
+        return self
+
     def close(self):
         '''Close the underlying file for this object.'''
         log.debug(('closing flv file ', self.type , self.tsr0))
         if self.type in ('record', 'append') and self.tsr0 is not None:
             self.writeDuration((self.tsr - self.tsr0)/1000.0)
-        if self.fp is not None: 
+        if self.fp is not None:
             try: self.fp.close()
             except: pass
             self.fp = None
-    
+
     def delete(self, path):
         '''Delete the underlying file for this object.'''
         try: os.unlink(path)
         except: pass
-        
+
     def getDuration(self):
         return self.duration
-        
+
     def writeDuration(self, duration):
         log.debug(('writing duration', duration))
         self.duration = duration
@@ -710,7 +710,7 @@ class FLV(object):
         if lastpos != 13: self.fp.seek(13, os.SEEK_SET)
         self.fp.write(data)
         if lastpos != 13: self.fp.seek(lastpos, os.SEEK_SET)
-        
+
     def write(self, message):
         '''Write a message to the file, assuming it was opened for writing or appending.'''
 #        if message.type == Message.VIDEO:
@@ -726,7 +726,7 @@ class FLV(object):
             data = struct.pack('>BBHBHB', message.type, (length >> 16) & 0xff, length & 0x0ffff, (ts >> 16) & 0xff, ts & 0x0ffff, (ts >> 24) & 0xff) + '\x00\x00\x00' +  message.data
             data += struct.pack('>I', len(data))
             self.fp.write(data)
-    
+
     def reader(self, stream):
         '''A generator to periodically read the file and dispatch them to the stream. The supplied stream
         object must have a send(Message) method and id and client properties.'''
@@ -744,7 +744,7 @@ class FLV(object):
                 type, len0, len1, ts0, ts1, ts2, sid0, sid1 = struct.unpack('>BBHBHBBH', bytes)
                 length = (len0 << 16) | len1; ts = (ts0 << 16) | (ts1 & 0x0ffff) | (ts2 << 24)
                 body = self.fp.read(length); ptagsize, = struct.unpack('>I', self.fp.read(4))
-                if ptagsize != (length+11): 
+                if ptagsize != (length+11):
                     log.debug(('invalid previous tag-size found:', ptagsize, '!=', (length+11),'ignored.'))
                 if stream is None or stream.client is None: break # if it is closed
                 #hdr = Header(3 if type == Message.AUDIO else 4, ts if ts < 0xffffff else 0xffffff, length, type, stream.id)
@@ -758,18 +758,18 @@ class FLV(object):
                     obj = amfReader.read()
                     log.debug(('FLV.read()', name, repr(obj)))
                 yield stream.send(msg)
-                if ts > self.tsp: 
+                if ts > self.tsp:
                     diff, self.tsp = ts - self.tsp, ts
                     log.debug(('FLV.read() sleep', diff))
                     yield multitask.sleep(diff / 1000.0)
         except StopIteration: pass
-        except: 
+        except:
             log.debug(('closing the reader', (sys and sys.exc_info() or None)))
-            if self.fp is not None: 
+            if self.fp is not None:
                 try: self.fp.close()
                 except: pass
                 self.fp = None
-            
+
     def seek(self, offset):
         '''For file reader, try seek to the given time. The offset is in millisec'''
         if self.type == 'read':
@@ -788,8 +788,8 @@ class FLV(object):
                 ptagsize, = struct.unpack('>I', self.fp.read(4))
                 if ptagsize != (length+11): break
             log.debug(('FLV.seek() new ts=', ts, 'tell', self.fp.tell()))
-                
-        
+
+
 class Stream(object):
     '''The stream object that is used for RTMP stream.'''
     count = 0;
@@ -805,32 +805,38 @@ class Stream(object):
         log.debug((self, 'closing'))
         if self.recordfile is not None:
             self.recordfile.close()
-            log.debug((self, 'Record File Duration: ', self.recordfile.getDuration()))
+            fileDuration = self.recordfile.getDuration()
+            log.debug((self, 'Record File Duration: ', fileDuration))
+
             self.recordfile = None
             '''Upload reocredfile to s3 and send a Message'''
             if upload:
-                storage = Storage(self.name+'.flv')
-                thread.start_new_thread(storage.upload, ())
-                response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Record.Stop', description="", details=None, duration=storage.getFileDuration())])
-                multitask.add(self.checkUploadAndSend(response, storage, self.client))
+                if fileDuration != 0:
+                    storage = Storage(self.name+'.flv')
+                    thread.start_new_thread(storage.upload, ())
+                    response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Record.Stop', description="", details=None, duration=storage.getFileDuration())])
+                    multitask.add(self.checkUploadAndSend(response, storage, self.client))
+                else :
+                    response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Record.Stop', description="", details=None, duration=-1)])
+                    multitask.add( self.clientSend(response, self.client) )
 
         if self.playfile is not None: self.playfile.close(); self.playfile = None
         response = Command(name='onStatus', id=1, tm=self.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Unpublish.Success', description="", details=None)])
         multitask.add(self.clientSend(response, self.client))
-              
+
         self.client = None # to clear the reference
-    
+
     def checkUploadAndSend(self, msg, storage, client):
         '''Method to check the 's3upload' and then send a Message or Command on this stream.'''
         for i in range(10):
             if storage.hasUpload(): break
             yield multitask.sleep(0.5)
-            
+
         yield self.clientSend(msg, client)
-    
+
     def __repr__(self):
         return self._name;
-    
+
     def recv(self):
         '''Generator to receive new Message on this stream, or None if stream is closed.'''
         return self.queue.get()
@@ -842,11 +848,11 @@ class Stream(object):
         # if _debug: print self,'send'
         log.debug((self, 'clientSend ', msg))
         yield client.writeMessage(msg)
-        
+
     def send(self, msg):
         '''Method to send a Message or Command on this stream.'''
         yield self.clientSend(msg, self.client)
-        
+
 class Client(Protocol):
     '''The client object represents a single connected client to the server.'''
     def __init__(self, sock, server):
@@ -859,7 +865,7 @@ class Client(Protocol):
     def recv(self):
         '''Generator to receive new Message (msg, arg) on this stream, or (None,None) if stream is closed.'''
         return self.queue.get()
-    
+
     def connectionClosed(self):
         '''Called when the client drops the connection'''
         log.debug(('Client.connectionClosed'))
@@ -878,7 +884,7 @@ class Client(Protocol):
             elif cmd.name == 'createStream':
                 response = Command(name='_result', id=cmd.id, tm=self.relativeTime, type=self.rpc, args=[self._nextStreamId])
                 yield self.writeMessage(response.toMessage())
-                
+
                 stream = Stream(self) # create a stream object
                 stream.id = self._nextStreamId
                 self.streams[self._nextStreamId] = stream
@@ -897,14 +903,14 @@ class Client(Protocol):
             assert msg.streamId in self.streams
             # if _debug: print self.streams[msg.streamId], 'recv'
             stream = self.streams[msg.streamId]
-            if not stream.client: stream.client = self 
+            if not stream.client: stream.client = self
             yield stream.queue.put(msg) # give it to stream
 
     @property
     def rpc(self):
         # TODO: reverting r141 since it causes exception in setting self.rpc
         return Message.RPC if self.objectEncoding == 0.0 else Message.RPC3
-    
+
     def accept(self):
         '''Method to accept an incoming client.'''
         response = Command()
@@ -916,7 +922,7 @@ class Client(Protocol):
             arg.objectEncoding, arg.details = self.objectEncoding, None
         response.setArg(arg)
         yield self.writeMessage(response.toMessage())
-    
+
     def rejectConnection(self, reason=''):
         '''Method to reject an incoming client.'''
         response = Command()
@@ -924,7 +930,7 @@ class Client(Protocol):
         response.setArg(amf.Object(level='status', code='NetConnection.Connect.Rejected',
                         description=reason, fmsVer='rtmplite/8,2', details=None))
         yield self.writeMessage(response.toMessage())
-        
+
     def redirectConnection(self, url, reason='Connection failed'):
         '''Method to redirect an incoming client to the given url.'''
         response = Command()
@@ -942,7 +948,7 @@ class Client(Protocol):
         self._nextCallId += 1
         log.debug(('Client.call method=', method, 'args=', args, ' msg=', cmd.toMessage()))
         yield self.writeMessage(cmd.toMessage())
-            
+
     def createStream(self):
         ''' Create a stream on the server side'''
         stream = Stream(self)
@@ -965,7 +971,7 @@ class Server(object):
         '''Generator to wait for incoming client connections on this server and return
         (client, args) or (None, None) if the socket is closed or some error.'''
         return self.queue.get()
-        
+
     def run(self):
         try:
             while True:
@@ -977,9 +983,9 @@ class Server(object):
                 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1) # make it non-block
                 Client(sock, self)
         except GeneratorExit: pass # terminate
-        except: 
+        except:
             log.debug(('rtmp.Server exception ', (sys and sys.exc_info() or None)))
-        
+
         if (self.sock):
             try: self.sock.close(); self.sock = None
             except: pass
@@ -1023,17 +1029,17 @@ class App(object):
         return True # should return True so that the data is actually published in that stream
     def onPlayData(self, client, stream, message):
         return True # should return True so that data will be actually played in that stream
-        
+
     def publishNotify(self, stream):
         for s in self.players.get(stream.name, []):
             response = Command(name='onStatus', id=1, tm=s.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Play.PublishNotify', description='', details=None)])
             yield s.clientSend(response, s.client)
-        
+
     def unpublishNotify(self, stream):
         for s in self.players.get(stream.name, []):
             response = Command(name='onStatus', id=1, tm=s.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Play.UnpublishNotify', description='', details=None)])
             yield s.clientSend(response, s.client)
-        
+
     def getfile(self, path, name, root, mode):
         if mode == 'play':
             path = getfilename(path, name, root)
@@ -1060,14 +1066,14 @@ class Wirecast(App):
         App.onPublish(self, client, stream)
         if not hasattr(stream, 'metaData'): stream.metaData = None
         if not hasattr(stream, 'avcSeq'): stream.avcSeq = None
-        
+
     def onPlay(self, client, stream):
         App.onPlay(self, client, stream)
         if not hasattr(stream, 'avcIntra'): stream.avcIntra = False
         publisher = self.publishers.get(stream.name, None)
         if publisher and publisher.metaData: # send published meta data to this player joining late
             multitask.add(stream.send(publisher.metaData.dup()))
-    
+
     def onPublishData(self, client, stream, message):
         if message.type == Message.DATA and not stream.metaData: # store the first meta data on this published stream for late joining players
             stream.metaData = message.dup()
@@ -1099,7 +1105,7 @@ class FlashServer(object):
         self.apps = dict({'*': App, 'wirecast': Wirecast}) # supported applications: * means any as in {'*': App}
         self.clients = dict()  # list of clients indexed by scope. First item in list is app instance.
         self.root = '';
-        
+
     def start(self, host='0.0.0.0', port=1935):
         '''This should be used to start listening for RTMP connections on the given port, which defaults to 1935.'''
         if not self.server:
@@ -1110,14 +1116,14 @@ class FlashServer(object):
             sock.listen(5)
             self.server = Server(sock) # start rtmp server on that socket
             multitask.add(self.serverlistener())
-    
+
     def stop(self):
         log.info('stopping Flash server')
         if self.server and self.sock:
             try: self.sock.close(); self.sock = None
             except: pass
         self.server = None
-        
+
     def serverlistener(self):
         '''Server listener (generator). It accepts all connections and invokes client listener'''
         try:
@@ -1144,35 +1150,35 @@ class FlashServer(object):
                         app = self.apps[name] if name in self.apps else self.apps['*'] # application class
                         if client.path in self.clients: inst = self.clients[client.path][0]
                         else: inst = app()
-                        
+
                         win_ack = Message()
                         win_ack.time, win_ack.type, win_ack.data = client.relativeTime, Message.WIN_ACK_SIZE, struct.pack('>L', client.writeWinSize)
                         yield client.writeMessage(win_ack)
-                        
+
 #                        set_peer_bw = Message()
 #                        set_peer_bw.time, set_peer_bw.type, set_peer_bw.data = client.relativeTime, Message.SET_PEER_BW, struct.pack('>LB', client.writeWinSize, 1)
 #                        client.writeMessage(set_peer_bw)
-                        
-                        try: 
+
+                        try:
                             result = inst.onConnect(client, *args)
-                        except: 
+                        except:
                             log.error(sys.exc_info())
-                            yield client.rejectConnection(reason='Exception on onConnect'); 
+                            yield client.rejectConnection(reason='Exception on onConnect');
                             continue
                         if result is True or result is None:
-                            if client.path not in self.clients: 
+                            if client.path not in self.clients:
                                 self.clients[client.path] = [inst]; inst._clients=self.clients[client.path]
                             self.clients[client.path].append(client)
                             if result is True:
                                 yield client.accept() # TODO: else how to kill this task when rejectConnection() later
                             multitask.add(self.clientlistener(client)) # receive messages from client.
-                        else: 
+                        else:
                             yield client.rejectConnection(reason='Rejected in onConnect')
         except GeneratorExit: pass # terminate
         except StopIteration: raise
-        except: 
+        except:
             log.error(('serverlistener exception', traceback.print_exc()))
-            
+
     def clientlistener(self, client):
         '''Client listener (generator). It receives a command and invokes client handler, or receives a new stream and invokes streamlistener.'''
         try:
@@ -1189,7 +1195,7 @@ class FlashServer(object):
         except StopIteration: raise
         except:
             log.error(('clientlistener exception', (sys and sys.exc_info() or None)))
-        
+
         try:
             # client is disconnected, clear our state for application instance.
             log.debug(('cleaning up client', client.path))
@@ -1206,9 +1212,9 @@ class FlashServer(object):
                 inst._clients = None
                 del self.clients[client.path]
             if inst is not None: inst.onDisconnect(client)
-        except: 
+        except:
             log.debug(('clientlistener exception', (sys and sys.exc_info() or None)))
-            
+
     def closehandler(self, stream, cmd=None, upload=True):
         '''A stream is closed explicitly when a closeStream command is received from given client.'''
         if stream.client is not None:
@@ -1247,7 +1253,7 @@ class FlashServer(object):
                 log.debug(('Client.call method=', code, 'args=', args, ' msg=', res.toMessage()))
                 yield client.writeMessage(res.toMessage())
         yield
-        
+
     def streamlistener(self, stream):
         '''Stream listener (generator). It receives stream message and invokes streamhandler.'''
         try:
@@ -1260,9 +1266,9 @@ class FlashServer(object):
                     break
                 # if _debug: msg
                 multitask.add(self.streamhandler(stream, msg))
-        except: 
+        except:
             log.error(('streamlistener exception', (sys and sys.exc_info() or None)))
-            
+
     def streamhandler(self, stream, message):
         '''A generator to handle a single message on the stream.'''
         try:
@@ -1276,14 +1282,14 @@ class FlashServer(object):
                 elif cmd.name == 'closeStream':
                     self.closehandler(stream, cmd)
                 elif cmd.name == 'seek':
-                    yield self.seekhandler(stream, cmd) 
+                    yield self.seekhandler(stream, cmd)
             else: # audio or video message
                 yield self.mediahandler(stream, message)
         except GeneratorExit: pass
         except StopIteration: raise
-        except: 
+        except:
             log.error(('exception in streamhandler', (sys and sys.exc_info())))
-    
+
     def publishhandler(self, stream, cmd):
         '''A new stream is published. Store the information in the application instance.'''
         try:
@@ -1298,7 +1304,7 @@ class FlashServer(object):
                 log.debug('Stream name already in use')
             inst.publishers[stream.name] = stream # store the client for publisher
             inst.onPublish(stream.client, stream)
-            
+
             stream.recordfile = inst.getfile(stream.client.path, stream.name, self.root, stream.mode)
             stream.filename = getfilename(stream.client.path, stream.name, self.root)
             log.debug(('client.path:', stream.client.path, ',stream.name:', stream.name, ',root:', self.root))
@@ -1306,7 +1312,7 @@ class FlashServer(object):
             yield inst.publishNotify(stream)
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='status', code='NetStream.Publish.Start', description='', details=None)])
             yield stream.send(response)
-            if stream.mode != 'live': 
+            if stream.mode != 'live':
                 response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='status', code='NetStream.Record.Start', description='', details=None)])
                 yield stream.send(response)
         except ValueError, E: # some error occurred. inform the app.
@@ -1334,42 +1340,42 @@ class FlashServer(object):
                 elif start >= 0: raise ValueError, 'Stream name not found'
             log.debug(('playing stream=', name, 'start=', start))
             inst.onPlay(stream.client, stream)
-            
+
             # Default chunk size is 128. It is pretty small when we stream high audio and video quality.
             # So, send the choosen chunk size to flash client.
             stream.client.writeChunkSize = Protocol.HIGH_WRITE_CHUNK_SIZE
             m0 = Message() # SetChunkSize
             m0.time, m0.type, m0.data = stream.client.relativeTime, Message.CHUNK_SIZE, struct.pack('>L', stream.client.writeChunkSize)
             yield stream.client.writeMessage(m0)
-            
+
 #            m1 = Message() # UserControl/StreamIsRecorded
 #            m1.time, m1.type, m1.data = stream.client.relativeTime, Message.USER_CONTROL, struct.pack('>HI', 4, stream.id)
 #            yield stream.client.writeMessage(m1)
-            
+
             m2 = Message() # UserControl/StreamBegin
             m2.time, m2.type, m2.data = stream.client.relativeTime, Message.USER_CONTROL, struct.pack('>HI', 0, stream.id)
             yield stream.client.writeMessage(m2)
-            
+
 #            response = Command(name='onStatus', id=cmd.id, args=[amf.Object(level='status',code='NetStream.Play.Reset', description=stream.name, details=None)])
 #            yield stream.send(response)
-            
+
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Play.Start', description=stream.name, details=None)])
             yield stream.send(response)
-            
+
 #            response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Play.PublishNotify', description=stream.name, details=None)])
 #            yield stream.send(response)
-            
+
             if task is not None: multitask.add(task)
         except ValueError, E: # some error occurred. inform the app.
             log.error(('error in playing stream', str(E)))
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='error',code='NetStream.Play.StreamNotFound',description=str(E),details=None)])
             yield stream.send(response)
-            
+
     def seekhandler(self, stream, cmd):
         '''A stream is seeked to a new position. This is allowed only for play from a file.'''
         try:
             offset = cmd.args[0]
-            if stream.playfile is None or stream.playfile.type != 'read': 
+            if stream.playfile is None or stream.playfile.type != 'read':
                 raise ValueError, 'Stream is not seekable'
             stream.playfile.seek(offset)
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='status',code='NetStream.Seek.Notify', description=stream.name, details=None)])
@@ -1378,7 +1384,7 @@ class FlashServer(object):
             log.error(('error in seeking stream', str(E)))
             response = Command(name='onStatus', id=cmd.id, tm=stream.client.relativeTime, args=[amf.Object(level='error',code='NetStream.Seek.Failed',description=str(E),details=None)])
             yield stream.send(response)
-            
+
     def mediahandler(self, stream, message):
         '''Handle incoming media on the stream, by sending to other stream in this application instance.'''
         if stream.client is not None:
@@ -1402,9 +1408,9 @@ if __name__ == '__main__':
     parser.add_option('-p', '--port',    dest='port',    default=1935, type="int", help='listening port number. Default 1935')
     parser.add_option('-r', '--root',    dest='root',    default='./',       help="document path prefix. Directory must end with /. Default './'")
     parser.add_option('-d', '--verbose', dest='verbose', default=False, action='store_true', help='enable debug trace')
-    parser.add_option('-c', '--identity',dest='identity',default='S3.ini', help='a file stored s3 accessKey and scretKey for upload')  
+    parser.add_option('-c', '--identity',dest='identity',default='S3.ini', help='a file stored s3 accessKey and scretKey for upload')
     (options, args) = parser.parse_args()
-    
+
     _debug = options.verbose
     try:
         Storage.loadConfig(options.identity)
@@ -1416,4 +1422,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         pass
     log.info((time.asctime() ,'Flash Server Stops'))
-    
